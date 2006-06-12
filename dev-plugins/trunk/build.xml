@@ -4,6 +4,7 @@
    <property name = "classes" value = "./classes"/>  
    <property name = "plugins" value = "./plugins"/>
    <property name = "lib" value = "./lib"/>
+   <property name = "dist_path" value = "edu.stanford.smi.protege.developer"/>
    <path id = "project.classpath">    
      <pathelement location = "${lib}/protege.jar"/>
    </path>
@@ -11,6 +12,7 @@
    <target name = "init">
      <mkdir dir = "${classes}"/>    
      <mkdir dir = "${plugins}"/>
+     <mkdir dir = "${plugins}/${dist_path}"/>
    </target>  
 
 
@@ -21,9 +23,15 @@
    </target>
 
    <target name = "jar" depends = "compile">
-     <jar jarfile = "${plugins}/shortcourse.jar" 
+     <jar jarfile = "${plugins}/${dist_path}/dev-plugins.jar" 
           basedir = "${classes}" 
           manifest = "${src}/META-INF/MANIFEST.MF"/>  
+   </target>
+
+   <target name = "dist" depends = "jar">
+     <zip basedir = "${plugins}"
+          includes = "${dist_path}/**"
+          destfile = "${plugins}/dist.zip"/>
    </target>
 
    <target name = "clean">
