@@ -1,0 +1,34 @@
+<?xml version = "1.0" encoding = "utf-8"?>
+<project name = "Developer Plugins" default = "usage" basedir = ".">    
+   <property name = "src" value = "./src"/>  
+   <property name = "classes" value = "./classes"/>  
+   <property name = "plugins" value = "./plugins"/>
+   <property name = "lib" value = "./lib"/>
+   <path id = "project.classpath">    
+     <pathelement location = "${lib}/protege.jar"/>
+   </path>
+
+   <target name = "init">
+     <mkdir dir = "${classes}"/>    
+     <mkdir dir = "${plugins}"/>
+   </target>  
+
+
+   <target name = "compile" depends = "init">    
+     <javac srcdir = "${src}" destdir = "${classes}" debug="on">
+       <classpath refid = "project.classpath"/>    
+     </javac>    
+   </target>
+
+   <target name = "jar" depends = "compile">
+     <jar jarfile = "${plugins}/shortcourse.jar" 
+          basedir = "${classes}" 
+          manifest = "${src}/META-INF/MANIFEST.MF"/>  
+   </target>
+
+   <target name = "clean">
+     <delete dir = "${plugins}"/>
+     <delete dir = "${classes}"/>
+   </target>
+
+</project>
