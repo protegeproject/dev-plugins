@@ -30,9 +30,12 @@ import edu.stanford.smi.protege.widget.AbstractTabWidget;
 public class ServerStatsPlugin extends AbstractTabWidget {
   private UserInfoTable userInfo;
   private JTable userInfoTable;
-  private boolean infoAreaWritten = false;
-  private JTextArea infoArea;
 
+  private JTextField clientCacheText;
+  private JTextField clientClosureCacheText;
+  private JTextField roundTripText;
+  private JTextField serverSpeedText;
+  
   private JButton refreshButton;
   private JButton clearCacheButton;
   
@@ -47,20 +50,42 @@ public class ServerStatsPlugin extends AbstractTabWidget {
   }
   
   private void layoutUI() {
-    setLayout(new GridBagLayout());
+    setLayout(new BorderLayout());
     
-    infoArea = new JTextArea();
-    infoArea.setRows(4);
-    infoArea.setColumns(80);
-    add(infoArea);
+    add(createTextArea(), BorderLayout.NORTH);
     
     userInfo = new UserInfoTable();
     userInfoTable = new JTable();
     userInfoTable.setModel(userInfo);
-    add(new JScrollPane(userInfoTable));
+    add(new JScrollPane(userInfoTable), BorderLayout.CENTER);
 
-    add(refreshButton);
-    add(clearCacheButton);
+    JPanel buttonArea = new JPanel(new GridLayout(1,2));
+    buttonArea.add(refreshButton);
+    buttonArea.add(clearCacheButton);
+    add(buttonArea, BorderLayout.SOUTH);
+  }
+  
+  private JPanel createTextArea() {
+    int col2size = 8;
+    JPanel textArea = new JPanel(new GridLayout(2,4));
+    
+    textArea.add(new JLabel("Client Cache Hit rate:"));
+    clientCacheText = createOutputTextField(col2size);
+    textArea.add(clientCacheText);
+    
+    textArea.add(new JLabel("Client Closure Cache rate:"));
+    clientClosureCacheText = createOutputTextField(col2size);
+    textArea.add(clientClosureCacheText);
+    
+    textArea.add(new JLabel("Estimated round trip time:"));
+    roundTripText = createOutputTextField(col2size);
+    textArea.add(roundTripText);
+    
+    textArea.add(new JLabel("Milliseconds to calculate Frame Cache"));
+    serverSpeedText = createOutputTextField(col2size);
+    textArea.add(serverSpeedText);
+    
+    return textArea;
   }
   
   private void createRefreshButton() {
@@ -83,6 +108,13 @@ public class ServerStatsPlugin extends AbstractTabWidget {
     });
   }
   
+  private JTextField createOutputTextField(int size) {
+    JTextField field = new JTextField(size);
+    field.setEnabled(false);
+    field.setHorizontalAlignment(SwingConstants.LEFT);
+    return field;
+  }
+  
   private void refresh() {
     RemoteClientFrameStore client = getRemoteClientFrameStore();
     RemoteClientStats clientStats = client.getClientStats();
@@ -90,39 +122,28 @@ public class ServerStatsPlugin extends AbstractTabWidget {
     FrameCalculatorStats serverStats = client.getServerStats();
     long interval = System.currentTimeMillis() - startTime;
     
-    if (infoAreaWritten) {
-      infoArea.replaceRange(null, 0, 3);
-    }
     int total = clientStats.getCacheHits() + clientStats.getCacheMisses();
     if (total != 0)  {
       float rate = ((float) 100) * ((float) clientStats.getCacheHits()) / ((float) total);
-      infoArea.append("Client Cache Hit rate: " + rate + "\n");
+      clientCacheText.setText("" + rate);
     } else {
-      infoArea.append("Caching not started\n");
+      clientCacheText.setText("0/0");
     }
     
     total = clientStats.getClosureCacheHits() + clientStats.getClosureCacheMisses();
     if (total != 0) {
       float rate = ((float) 100) * ((float) clientStats.getClosureCacheHits()) / ((float) total);
-      infoArea.append("Client Closure Cache Hit rate: " + rate + "\n");
+      clientClosureCacheText.setText("" + rate);
     } else {
-      infoArea.append("Closure Caching not started\n");
+      clientClosureCacheText.setText("Closure Caching not started\n");
     }
     
-    infoArea.append("Server is taking " + serverStats.getPrecalculateTime() 
-                    + "ms to pre-cache a frame\n");
-    infoArea.append("Round trip = " + interval + " ms");
-    infoAreaWritten = true;
+    roundTripText.setText("" + interval);
+    
+    serverSpeedText.setText("" + serverStats.getPrecalculateTime());
     
     userInfo.setUserInfo(client.getUserInfo(), serverStats);
 
-  }
-  
-  private JTextField createOutputTextField(int size) {
-    JTextField field = new JTextField(size);
-    field.setEnabled(false);
-    field.setHorizontalAlignment(SwingConstants.LEFT);
-    return field;
   }
   
   public RemoteClientFrameStore getRemoteClientFrameStore() {

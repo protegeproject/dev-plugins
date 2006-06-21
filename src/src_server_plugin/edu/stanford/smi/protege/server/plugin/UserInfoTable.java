@@ -97,5 +97,9 @@ public class UserInfoTable extends AbstractTableModel {
       throw new UnsupportedOperationException("Programmer Error");
     }
   }
+  
+  public RemoteSession getRemoteSession(int row) {
+    return sessions.get(row);
+  }
 
 }
