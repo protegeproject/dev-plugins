@@ -13,7 +13,8 @@ import edu.stanford.smi.protege.server.framestore.background.FrameCalculatorStat
 public class UserInfoTable extends AbstractTableModel {
 
   public enum Column {  
-    user("User"), ipAddr("IP Adress"), transaction("In Transaction?"), backlog("Server Backlog");
+    user("User"), ipAddr("IP Adress"), transaction("In Transaction?"), 
+    backlog("Server Backlog");
     
     private String name;   
     
