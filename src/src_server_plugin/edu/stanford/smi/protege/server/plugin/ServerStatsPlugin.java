@@ -2,6 +2,7 @@ package edu.stanford.smi.protege.server.plugin;
 
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
+import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -12,6 +13,7 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
+import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 
@@ -26,44 +28,39 @@ import edu.stanford.smi.protege.widget.AbstractTabWidget;
 
 // an example tab
 public class ServerStatsPlugin extends AbstractTabWidget {
-  
   private UserInfoTable userInfo;
   private JTable userInfoTable;
-  private JTextField cacheStatsField;
-  private JTextField serverCalcTimeField;
-  private JTextField closureCacheStatsField;
+  private boolean infoAreaWritten = false;
+  private JTextArea infoArea;
+
   private JButton refreshButton;
+  private JButton clearCacheButton;
   
   public void initialize() {
     setLabel("Server Stats");
     setIcon(Icons.getInstanceIcon());
     
     createRefreshButton();
+    createClearCacheButton();
     layoutUI();
     refresh();
   }
   
   private void layoutUI() {
-    setLayout(new BorderLayout());
+    setLayout(new GridBagLayout());
+    
+    infoArea = new JTextArea();
+    infoArea.setRows(4);
+    infoArea.setColumns(80);
+    add(infoArea);
+    
     userInfo = new UserInfoTable();
     userInfoTable = new JTable();
     userInfoTable.setModel(userInfo);
-    add(new JScrollPane(userInfoTable), BorderLayout.EAST);
-    add(createRemoteClientStats(), BorderLayout.NORTH);
-    serverCalcTimeField = createOutputTextField(60);
-    add(serverCalcTimeField, BorderLayout.CENTER);
-    add(refreshButton, BorderLayout.SOUTH);
-  }
-  
-  private JPanel createRemoteClientStats() {
-    JPanel clientStats = new JPanel(new GridLayout(2,2));
-    clientStats.add(new JLabel("Client Cache Hit rate: "));
-    cacheStatsField = createOutputTextField(10);
-    clientStats.add(cacheStatsField);
-    clientStats.add(new JLabel("Client Closure Cache Hit rate: "));
-    closureCacheStatsField = createOutputTextField(10);
-    clientStats.add(closureCacheStatsField);
-    return clientStats;
+    add(new JScrollPane(userInfoTable));
+
+    add(refreshButton);
+    add(clearCacheButton);
   }
   
   private void createRefreshButton() {
@@ -75,22 +72,50 @@ public class ServerStatsPlugin extends AbstractTabWidget {
     });
   }
   
+  private void createClearCacheButton() {
+    clearCacheButton = new JButton("Clear Client Cache");
+    clearCacheButton.addActionListener( new ActionListener() {
+      public void actionPerformed(ActionEvent event) {
+        RemoteClientFrameStore client = getRemoteClientFrameStore();
+        client.flushCache();
+        refresh();
+      }
+    });
+  }
+  
   private void refresh() {
-    DefaultKnowledgeBase kb = (DefaultKnowledgeBase) getProject().getKnowledgeBase();
-    RemoteClientFrameStore client = (RemoteClientFrameStore) kb.getTerminalFrameStore();
+    RemoteClientFrameStore client = getRemoteClientFrameStore();
     RemoteClientStats clientStats = client.getClientStats();
+    long startTime = System.currentTimeMillis();
     FrameCalculatorStats serverStats = client.getServerStats();
+    long interval = System.currentTimeMillis() - startTime;
     
-    float rate = ((float) 100) * ((float) clientStats.getCacheHits()) / ((float) (clientStats.getCacheHits() + clientStats.getCacheMisses()));
-    cacheStatsField.setText("" + rate);
+    if (infoAreaWritten) {
+      infoArea.replaceRange(null, 0, 3);
+    }
+    int total = clientStats.getCacheHits() + clientStats.getCacheMisses();
+    if (total != 0)  {
+      float rate = ((float) 100) * ((float) clientStats.getCacheHits()) / ((float) total);
+      infoArea.append("Client Cache Hit rate: " + rate + "\n");
+    } else {
+      infoArea.append("Caching not started\n");
+    }
     
-    rate = ((float) 100) * ((float) clientStats.getClosureCacheHits()) 
-                / ((float) (clientStats.getClosureCacheHits() + clientStats.getClosureCacheMisses()));
-    closureCacheStatsField.setText("" + rate);
+    total = clientStats.getClosureCacheHits() + clientStats.getClosureCacheMisses();
+    if (total != 0) {
+      float rate = ((float) 100) * ((float) clientStats.getClosureCacheHits()) / ((float) total);
+      infoArea.append("Client Closure Cache Hit rate: " + rate + "\n");
+    } else {
+      infoArea.append("Closure Caching not started\n");
+    }
+    
+    infoArea.append("Server is taking " + serverStats.getPrecalculateTime() 
+                    + "ms to pre-cache a frame\n");
+    infoArea.append("Round trip = " + interval + " ms");
+    infoAreaWritten = true;
     
     userInfo.setUserInfo(client.getUserInfo(), serverStats);
-    
-    serverCalcTimeField.setText("Server is taking " + serverStats.getPrecalculateTime() + "ms to pre-cache a frame");
+
   }
   
   private JTextField createOutputTextField(int size) {
@@ -100,7 +125,10 @@ public class ServerStatsPlugin extends AbstractTabWidget {
     return field;
   }
   
-
+  public RemoteClientFrameStore getRemoteClientFrameStore() {
+    DefaultKnowledgeBase kb = (DefaultKnowledgeBase) getProject().getKnowledgeBase();
+    return (RemoteClientFrameStore) kb.getTerminalFrameStore();
+  }
   
   public static boolean isSuitable(Project project, Collection errors) {
     KnowledgeBase kb = project.getKnowledgeBase();
