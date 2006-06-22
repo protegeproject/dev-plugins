@@ -24,6 +24,7 @@ import edu.stanford.smi.protege.resource.Icons;
 import edu.stanford.smi.protege.server.framestore.RemoteClientFrameStore;
 import edu.stanford.smi.protege.server.framestore.RemoteClientStats;
 import edu.stanford.smi.protege.server.framestore.background.FrameCalculatorStats;
+import edu.stanford.smi.protege.util.transaction.TransactionIsolationLevel;
 import edu.stanford.smi.protege.widget.AbstractTabWidget;
 
 // an example tab
@@ -35,6 +36,7 @@ public class ServerStatsPlugin extends AbstractTabWidget {
   private JTextField clientClosureCacheText;
   private JTextField roundTripText;
   private JTextField serverSpeedText;
+  private JTextField txLevelText;
   
   private JButton refreshButton;
   private JButton clearCacheButton;
@@ -67,7 +69,7 @@ public class ServerStatsPlugin extends AbstractTabWidget {
   
   private JPanel createTextArea() {
     int col2size = 8;
-    JPanel textArea = new JPanel(new GridLayout(2,4));
+    JPanel textArea = new JPanel(new GridLayout(5,2));
     
     textArea.add(new JLabel("Client Cache Hit rate:"));
     clientCacheText = createOutputTextField(col2size);
@@ -84,6 +86,10 @@ public class ServerStatsPlugin extends AbstractTabWidget {
     textArea.add(new JLabel("Milliseconds to calculate Frame Cache"));
     serverSpeedText = createOutputTextField(col2size);
     textArea.add(serverSpeedText);
+    
+    textArea.add(new JLabel("Transaction Isolation Level:"));
+    txLevelText = createOutputTextField(col2size);
+    textArea.add(txLevelText);
     
     return textArea;
   }
@@ -141,6 +147,9 @@ public class ServerStatsPlugin extends AbstractTabWidget {
     roundTripText.setText("" + interval);
     
     serverSpeedText.setText("" + serverStats.getPrecalculateTime());
+    
+    TransactionIsolationLevel level = client.getTransactionIsolationLevel();
+    txLevelText.setText(level == null ? "error" : level.toString());
     
     userInfo.setUserInfo(client.getUserInfo(), serverStats);
 
