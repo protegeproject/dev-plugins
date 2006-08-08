@@ -1,68 +1,25 @@
 <?xml version = "1.0" encoding = "utf-8"?>
-<project name = "Developer Plugins" default = "compile" basedir = ".">    
-   <property name = "src" value = "./src"/>  
-   <property name = "classes" value = "./classes"/>  
-   <property name = "plugins" value = "./plugins"/>
-   <property name = "lib" value = "./lib"/>
-   <property name = "server_plugin_dist" value = "edu.stanford.smi.protege.server"/>
-   <property name = "transaction_plugin_dist" value = "edu.stanford.protege.transaction"/>
-   <property name = "browserId_plugin_dist" value = "edu.stanford.protege.ui.browserid"/>
-	
-   <path id = "project.classpath">    
-     <pathelement location = "${lib}/protege.jar"/>
-   </path>
+<project name = "Developer Plugins" default = "compile" basedir = ".">
 
-   <target name = "init">
-     <mkdir dir = "${classes}"/>
-     <mkdir dir = "${classes}/server_plugin"/>
-     <mkdir dir = "${classes}/transaction_plugin"/>
-	 <mkdir dir = "${classes}/browserId_plugin"/>
-     <mkdir dir = "${plugins}"/>
-     <mkdir dir = "${plugins}/${server_plugin_dist}"/>
-     <mkdir dir = "${plugins}/${transaction_plugin_dist}"/>
-     <mkdir dir = "${plugins}/${browserId_plugin_dist}"/>
-   </target>  
-
-
-   <target name = "compile" depends = "init">    
-     <javac srcdir = "${src}/src_server_plugin" destdir = "${classes}/server_plugin" debug="on">
-       <classpath refid = "project.classpath"/>    
-     </javac>    
-     <javac srcdir = "${src}/src_transaction_plugin" destdir = "${classes}/transaction_plugin" debug="on">
-       <classpath refid = "project.classpath"/>    
-     </javac>
-     <javac srcdir = "${src}/src_frameIDBrowserSlot_plugin" destdir = "${classes}/browserid_plugin" debug="on">
-       <classpath refid = "project.classpath"/>    
-     </javac>
+   <target name="serverStats">
+     <ant dir="./serverStats" target="dist"/>
    </target>
 
-   <target name = "jar" depends = "compile">
-     <jar jarfile = "${plugins}/${server_plugin_dist}/dev-plugins.jar" 
-          basedir = "${classes}/server_plugin" 
-          manifest = "${src}/src_server_plugin/META-INF/MANIFEST.MF"/>  
-     <jar jarfile = "${plugins}/${transaction_plugin_dist}/transcationControl-plugin.jar" 
-          basedir = "${classes}/transaction_plugin" 
-          manifest = "${src}/src_transaction_plugin/META-INF/MANIFEST.MF"/> 
-     <jar jarfile = "${plugins}/${browserId_plugin_dist}/browserId-plugin.jar" 
-          basedir = "${classes}/browserid_plugin" 
-          manifest = "${src}/src_frameIDBrowserSlot_plugin/META-INF/MANIFEST.MF"/> 
+   <target name="transaction">
+     <ant dir="./transaction" target="dist"/>
    </target>
 
-   <target name = "dist" depends = "jar">
-     <zip basedir = "${plugins}"
-          includes = "${server_plugin_dist}/**"
-          destfile = "${plugins}/server_plugin.zip"/>
-     <zip basedir = "${plugins}"
-          includes = "${transaction_plugin_dist}/**"
-          destfile = "${plugins}/transaction_plugin.zip"/>
-     <zip basedir = "${plugins}"
-          includes = "${browserId_plugin_dist}/**"
-          destfile = "${plugins}/browserId_plugin.zip"/>
+   <target name="frameIDBrowserSlot">
+     <ant dir="./frameIDBrowserSlot" target="dist"/>
    </target>
 
-   <target name = "clean">
-     <delete dir = "${plugins}"/>
-     <delete dir = "${classes}"/>
+
+   <target name="all" depends="serverStats,transaction,frameIDBrowserSlot"/>
+
+   <target name="clean">
+     <ant dir="./serverStats" target="clean"/>
+     <ant dir="./transaction" target="clean"/>
+     <ant dir="./frameIDBrowserSlot" target="clean"/>
    </target>
 
 </project>
