@@ -2,6 +2,9 @@ package edu.stanford.smi.protege.query;
 
 import javax.swing.JLabel;
 
+import edu.stanford.smi.protege.model.DefaultKnowledgeBase;
+import edu.stanford.smi.protege.model.framestore.FrameStore;
+import edu.stanford.smi.protege.model.framestore.NarrowFrameStore;
 import edu.stanford.smi.protege.resource.Icons;
 import edu.stanford.smi.protege.widget.AbstractTabWidget;
 
@@ -13,6 +16,9 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
     setLabel("Advanced Query Tab");
     setIcon(Icons.getInstancesIcon());
     add(new JLabel("Query UI goes here"));
+    new InstallNarrowFrameStore(getKnowledgeBase()).execute();
   }
+  
+
 
 }
