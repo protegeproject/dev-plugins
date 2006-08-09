@@ -1,8 +1,6 @@
 package edu.stanford.smi.protege.server.plugin;
 
 import java.awt.BorderLayout;
-import java.awt.FlowLayout;
-import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -13,7 +11,6 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
-import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 
@@ -29,6 +26,11 @@ import edu.stanford.smi.protege.widget.AbstractTabWidget;
 
 // an example tab
 public class ServerStatsPlugin extends AbstractTabWidget {
+
+  /**
+   * 
+   */
+  private static final long serialVersionUID = -7384785943184573895L;
   private UserInfoTable userInfo;
   private JTable userInfoTable;
 
