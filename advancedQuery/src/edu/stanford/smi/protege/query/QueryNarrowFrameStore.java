@@ -21,12 +21,12 @@ import edu.stanford.smi.protege.util.transaction.TransactionMonitor;
 public class QueryNarrowFrameStore implements NarrowFrameStore {
   private NarrowFrameStore delegate;
   private String name;
-  private Set<Slot> parentSlots = new HashSet<Slot>();
+  private Set<Slot> parentSlots;
 
   
-  public QueryNarrowFrameStore(NarrowFrameStore delegate) {
+  public QueryNarrowFrameStore(NarrowFrameStore delegate, Set<Slot> parentSlots) {
     this.delegate = delegate;
-    
+    this.parentSlots = parentSlots;
   }
   
   @SuppressWarnings("unchecked")
