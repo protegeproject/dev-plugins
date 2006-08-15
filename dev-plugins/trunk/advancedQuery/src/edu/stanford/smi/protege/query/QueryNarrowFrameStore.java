@@ -1,22 +1,82 @@
 package edu.stanford.smi.protege.query;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 import edu.stanford.smi.protege.model.Facet;
 import edu.stanford.smi.protege.model.Frame;
 import edu.stanford.smi.protege.model.FrameID;
+import edu.stanford.smi.protege.model.Model;
 import edu.stanford.smi.protege.model.Reference;
 import edu.stanford.smi.protege.model.Slot;
+import edu.stanford.smi.protege.model.framestore.MergingNarrowFrameStore;
 import edu.stanford.smi.protege.model.framestore.NarrowFrameStore;
 import edu.stanford.smi.protege.model.query.Query;
+import edu.stanford.smi.protege.util.Log;
 import edu.stanford.smi.protege.util.transaction.TransactionMonitor;
 
 public class QueryNarrowFrameStore implements NarrowFrameStore {
   private NarrowFrameStore delegate;
   private String name;
+  private Set<Slot> parentSlots = new HashSet<Slot>();
 
+  
+  public QueryNarrowFrameStore(NarrowFrameStore delegate) {
+    this.delegate = delegate;
+    
+  }
+  
+  @SuppressWarnings("unchecked")
+  private void indexOntologies() {
+    Slot directSubSlots = (Slot) delegate.getFrame(Model.SlotID.DIRECT_SUBSLOTS);
+    Set<Slot> slots = new HashSet<Slot>();
+    for (Slot parent : parentSlots) {
+      slots.addAll((Set<Slot>) delegate.getClosure(parent, directSubSlots, null, false));
+    }
+    Collection<NarrowFrameStore> dataSources = getDataSources();
+    if (dataSources == null) {
+      Log.getLogger().warning("Could not index ontologies - phonetic search will fail");
+    }
+    for (NarrowFrameStore nfs : dataSources) {
+      for (Frame frame : nfs.getFrames()) {
+        for (Slot slot : parentSlots) {
+          
+        }
+      }
+    }
+  }
+  
+  private Collection<NarrowFrameStore> getDataSources() {
+    Collection<NarrowFrameStore> dataSources = new ArrayList<NarrowFrameStore>();
+    MergingNarrowFrameStore mnfs = null;
+    NarrowFrameStore nfs;
+    for (nfs = delegate; 
+         nfs != null && !(nfs instanceof MergingNarrowFrameStore);
+         nfs = nfs.getDelegate()) {
+      ;
+    }
+    if (nfs == null) {
+      return null;
+    }
+    mnfs = (MergingNarrowFrameStore) nfs;
+    for (NarrowFrameStore anfs : mnfs.getAvailableFrameStores()) {
+      NarrowFrameStore bottom = anfs;
+      while (bottom.getDelegate() != null) {
+        bottom = bottom.getDelegate();
+      }
+      dataSources.add(bottom);
+    }
+    return dataSources;
+  }
+  
+
+  /*---------------------------------------------------------------------
+   *  Common Narrow Frame Store Functions
+   */
+  
   public String getName() {
     return name;
   }
@@ -114,7 +174,7 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
     return delegate.getMatchingReferences(value, maxMatches);
   }
 
-  public Set executeQuery(Query query) {
+  public Set<Frame> executeQuery(Query query) {
     return delegate.executeQuery(query);
   }
 
