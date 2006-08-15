@@ -2,9 +2,6 @@ package edu.stanford.smi.protege.query;
 
 import javax.swing.JLabel;
 
-import edu.stanford.smi.protege.model.DefaultKnowledgeBase;
-import edu.stanford.smi.protege.model.framestore.FrameStore;
-import edu.stanford.smi.protege.model.framestore.NarrowFrameStore;
 import edu.stanford.smi.protege.resource.Icons;
 import edu.stanford.smi.protege.widget.AbstractTabWidget;
 
