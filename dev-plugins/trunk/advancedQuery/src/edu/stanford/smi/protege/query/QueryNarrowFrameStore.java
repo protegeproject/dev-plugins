@@ -1,11 +1,18 @@
 package edu.stanford.smi.protege.query;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.apache.lucene.analysis.standard.StandardAnalyzer;
+import org.apache.lucene.document.Document;
+import org.apache.lucene.document.Field;
+import org.apache.lucene.index.IndexWriter;
+
+import edu.stanford.smi.protege.model.Cls;
 import edu.stanford.smi.protege.model.Facet;
 import edu.stanford.smi.protege.model.Frame;
 import edu.stanford.smi.protege.model.FrameID;
@@ -15,38 +22,98 @@ import edu.stanford.smi.protege.model.Slot;
 import edu.stanford.smi.protege.model.framestore.MergingNarrowFrameStore;
 import edu.stanford.smi.protege.model.framestore.NarrowFrameStore;
 import edu.stanford.smi.protege.model.query.Query;
+import edu.stanford.smi.protege.util.ApplicationProperties;
 import edu.stanford.smi.protege.util.Log;
 import edu.stanford.smi.protege.util.transaction.TransactionMonitor;
 
 public class QueryNarrowFrameStore implements NarrowFrameStore {
+  private IndexWriter writer;
   private NarrowFrameStore delegate;
   private String name;
-  private Set<Slot> parentSlots;
+  private Set<Cls> parentSlots;
+  
+  private static final String FRAME_FIELD    = "frame";
+  private static final String SLOT_FIELD     = "slot";
+  private static final String CONTENTS_FIELD = "contents";
 
   
-  public QueryNarrowFrameStore(NarrowFrameStore delegate, Set<Slot> parentSlots) {
+  /*-----------------------------------------------------------
+   * Query Narrow Frame Store support methods.
+   */
+  
+  public QueryNarrowFrameStore(NarrowFrameStore delegate, Set<Cls> parentSlots) {
     this.delegate = delegate;
+    if (parentSlots == null) {
+      this.parentSlots = new HashSet<Cls>();
+      this.parentSlots.add((Cls) delegate.getFrame(Model.ClsID.STANDARD_SLOT));
+    }
     this.parentSlots = parentSlots;
+    new Thread() {
+      public void run() {
+        indexOntologies();
+      }
+    };
   }
   
   @SuppressWarnings("unchecked")
-  private void indexOntologies() {
-    Slot directSubSlots = (Slot) delegate.getFrame(Model.SlotID.DIRECT_SUBSLOTS);
-    Set<Slot> slots = new HashSet<Slot>();
-    for (Slot parent : parentSlots) {
-      slots.addAll((Set<Slot>) delegate.getClosure(parent, directSubSlots, null, false));
+  private boolean indexOntologies() {
+    IndexWriter myWriter;
+    try {
+      myWriter = new IndexWriter(ApplicationProperties.getApplicationDirectory().getAbsolutePath() + "/luceneIndex",
+                                             new StandardAnalyzer(),
+                                             true);
+    } catch (IOException e) {
+      Log.getLogger().warning("Could not index ontologies because of I/O Error" + e);
+      return false;
     }
     Collection<NarrowFrameStore> dataSources = getDataSources();
     if (dataSources == null) {
       Log.getLogger().warning("Could not index ontologies - phonetic search will fail");
+      return false;
     }
     for (NarrowFrameStore nfs : dataSources) {
       for (Frame frame : nfs.getFrames()) {
-        for (Slot slot : parentSlots) {
-          
+        for (Slot slot : getSearchableSlots()) {
+          String content = getValueString(nfs, frame, slot);
+          if (content == null) {
+            continue;
+          }
+          Document doc = new Document();
+          doc.add(new Field(FRAME_FIELD, "" + frame.getFrameID().getLocalPart(), 
+                            Field.Store.YES, Field.Index.UN_TOKENIZED));
+          doc.add(new Field(SLOT_FIELD, "" + slot.getFrameID().getLocalPart(),
+                            Field.Store.YES, Field.Index.UN_TOKENIZED));
+          doc.add(new Field(CONTENTS_FIELD, content, Field.Store.YES, Field.Index.TOKENIZED));
+          try {
+            writer.addDocument(doc);
+          } catch (IOException e) {
+            Log.getLogger().warning("Could not add frame slot value to searchable indicies - search will fail");
+            return false;
+          }
         }
       }
     }
+    synchronized (this) {
+      writer = myWriter;
+    }
+    return true;
+  }
+  
+  private String getValueString(NarrowFrameStore nfs, Frame frame, Slot slot) {
+    String result = null;
+    List values = nfs.getValues(frame, slot, (Facet) null, false);
+    if (values == null) {
+      return null;
+    }
+    for (Object value : values) {
+      if (value instanceof String) {
+        if (result == null) {
+          result = "";
+        }
+        result = result + " " + value;
+      }
+    }
+    return result;
   }
   
   private Collection<NarrowFrameStore> getDataSources() {
@@ -72,6 +139,20 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
     return dataSources;
   }
   
+  
+  private Set<Slot> getSearchableSlots() {
+    Slot directSubClsesSlot   = (Slot) delegate.getFrame(Model.SlotID.DIRECT_SUBCLASSES);
+    Slot directInstancesSlot  = (Slot) delegate.getFrame(Model.SlotID.DIRECT_INSTANCES);
+    Set<Slot> searchableSlots = new HashSet<Slot>();
+    for (Cls parentSlot : parentSlots) {
+      for (Object slotCls : delegate.getClosure(parentSlot, directSubClsesSlot, null, false)) {
+        if (slotCls instanceof Cls) {
+          searchableSlots.addAll(delegate.getClosure((Cls) slotCls, directInstancesSlot, null, false));
+        }
+      }
+    }
+    return searchableSlots;
+  }
 
   /*---------------------------------------------------------------------
    *  Common Narrow Frame Store Functions
@@ -175,6 +256,9 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
   }
 
   public Set<Frame> executeQuery(Query query) {
+    if (query instanceof PhoneticQuery) {
+      
+    }
     return delegate.executeQuery(query);
   }
 
