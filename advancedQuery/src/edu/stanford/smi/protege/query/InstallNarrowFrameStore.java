@@ -1,6 +1,10 @@
 package edu.stanford.smi.protege.query;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import edu.stanford.smi.protege.exception.ProtegeException;
+import edu.stanford.smi.protege.model.Cls;
 import edu.stanford.smi.protege.model.DefaultKnowledgeBase;
 import edu.stanford.smi.protege.model.KnowledgeBase;
 import edu.stanford.smi.protege.model.framestore.NarrowFrameStore;
@@ -15,10 +19,17 @@ public class InstallNarrowFrameStore extends ProtegeJob {
 
   @Override
   public Boolean run() throws ProtegeException {
-    SimpleFrameStore fs = (SimpleFrameStore) ((DefaultKnowledgeBase) getKnowledgeBase()).getTerminalFrameStore();
+    DefaultKnowledgeBase kb = (DefaultKnowledgeBase) getKnowledgeBase();
+    SimpleFrameStore fs = (SimpleFrameStore) kb.getTerminalFrameStore();
     NarrowFrameStore nfs = fs.getHelper();
-    QueryNarrowFrameStoreHandler qnfs = new QueryNarrowFrameStoreHandler(nfs);
-    fs.setHelper(qnfs.getNarrowFrameStore());
+    Object annotation = kb.getFrame("owl:AnnotationProperty");
+    Set<Cls> slotClasses = null;
+    if (annotation != null && annotation instanceof Cls) {
+      slotClasses = new HashSet<Cls>();
+      slotClasses.add((Cls) annotation);
+    }
+    QueryNarrowFrameStore qnfs = new QueryNarrowFrameStore(nfs, slotClasses);
+    fs.setHelper(qnfs);
     return new Boolean(true);
   }
 
