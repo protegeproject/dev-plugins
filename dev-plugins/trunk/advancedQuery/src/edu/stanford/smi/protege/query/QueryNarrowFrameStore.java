@@ -1,7 +1,6 @@
 package edu.stanford.smi.protege.query;
 
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -9,11 +8,11 @@ import edu.stanford.smi.protege.model.Cls;
 import edu.stanford.smi.protege.model.Facet;
 import edu.stanford.smi.protege.model.Frame;
 import edu.stanford.smi.protege.model.FrameID;
-import edu.stanford.smi.protege.model.Model;
 import edu.stanford.smi.protege.model.Reference;
 import edu.stanford.smi.protege.model.Slot;
 import edu.stanford.smi.protege.model.framestore.NarrowFrameStore;
 import edu.stanford.smi.protege.model.query.Query;
+import edu.stanford.smi.protege.query.indexing.PhoneticIndexer;
 import edu.stanford.smi.protege.util.transaction.TransactionMonitor;
 
 public class QueryNarrowFrameStore implements NarrowFrameStore {
@@ -22,23 +21,19 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
 
   private PhoneticIndexer indexer;
   
-
-
-  
   /*-----------------------------------------------------------
    * Query Narrow Frame Store support methods.
    */
   
-  public QueryNarrowFrameStore(NarrowFrameStore delegate, Set<Cls> parentSlots) {
+  public QueryNarrowFrameStore(NarrowFrameStore delegate, Set<Slot> searchableSlots) {
     this.delegate = delegate;
-    if (parentSlots == null) {
-      parentSlots = new HashSet<Cls>();
-      parentSlots.add((Cls) delegate.getFrame(Model.ClsID.STANDARD_SLOT));
-    }
-    indexer = new PhoneticIndexer(parentSlots, delegate);
-    Thread luceneThread = new Thread(indexer);
+    indexer = new PhoneticIndexer(searchableSlots, delegate);
+    indexer.indexOntologies();
+    /*
+    Thread luceneThread = new Thread("Lucene Indexing Thread",  indexer);
     luceneThread.setPriority(Thread.MIN_PRIORITY);
     luceneThread.start();
+    */
   }
   
  
@@ -101,6 +96,7 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
 
   public void addValues(Frame frame, Slot slot, Facet facet,
                         boolean isTemplate, Collection values) {
+    
     delegate.addValues(frame, slot, facet, isTemplate, values);
   }
 
