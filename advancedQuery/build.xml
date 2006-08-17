@@ -9,6 +9,7 @@
 	
    <path id = "project.classpath">    
      <pathelement location = "${lib}/protege.jar"/>
+     <pathelement location = "./lib/lucene-core-2.0.1-dev.jar"/>
    </path>
 
    <target name = "init">
