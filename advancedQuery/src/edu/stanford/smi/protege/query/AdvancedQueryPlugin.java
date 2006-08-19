@@ -15,7 +15,4 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
     add(new JLabel("Query UI goes here"));
     new InstallNarrowFrameStore(getKnowledgeBase()).execute();
   }
-  
-
-
 }

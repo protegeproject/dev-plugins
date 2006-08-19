@@ -1,8 +1,13 @@
 package edu.stanford.smi.protege.query;
 
+import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
+import java.util.logging.Level;
+
+import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.search.Searcher;
 
 import edu.stanford.smi.protege.model.Cls;
 import edu.stanford.smi.protege.model.Facet;
@@ -13,6 +18,7 @@ import edu.stanford.smi.protege.model.Slot;
 import edu.stanford.smi.protege.model.framestore.NarrowFrameStore;
 import edu.stanford.smi.protege.model.query.Query;
 import edu.stanford.smi.protege.query.indexing.PhoneticIndexer;
+import edu.stanford.smi.protege.util.Log;
 import edu.stanford.smi.protege.util.transaction.TransactionMonitor;
 
 public class QueryNarrowFrameStore implements NarrowFrameStore {
@@ -140,10 +146,15 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
   }
 
   public Set<Frame> executeQuery(Query query) {
-    if (query instanceof PhoneticQuery) {
-      
+    if (!(query instanceof PhoneticQuery)) {
+      return delegate.executeQuery(query);
     }
-    return delegate.executeQuery(query);
+    try {
+      return indexer.executeQuery((PhoneticQuery) query);
+    } catch (IOException ioe) {
+      Log.getLogger().log(Level.WARNING, "Search failed", ioe);
+      return null;
+    }
   }
 
   public void deleteFrame(Frame frame) {
