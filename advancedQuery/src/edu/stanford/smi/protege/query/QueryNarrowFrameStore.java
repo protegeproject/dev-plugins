@@ -5,7 +5,9 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.logging.Level;
+import java.util.logging.Logger;
 
+import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Searcher;
 
@@ -104,6 +106,9 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
                         boolean isTemplate, Collection values) {
     
     delegate.addValues(frame, slot, facet, isTemplate, values);
+    if (facet == null && !isTemplate) {
+      indexer.addValues(frame, slot, values);
+    }
   }
 
   public void moveValue(Frame frame, Slot slot, Facet facet,
@@ -114,11 +119,18 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
   public void removeValue(Frame frame, Slot slot, Facet facet,
                           boolean isTemplate, Object value) {
     delegate.removeValue(frame, slot, facet, isTemplate, value);
+    if (facet == null && !isTemplate) {
+      indexer.removeValue(frame, slot, value);
+    }
   }
 
   public void setValues(Frame frame, Slot slot, Facet facet,
                         boolean isTemplate, Collection values) {
     delegate.setValues(frame, slot, facet, isTemplate, values);
+    if (facet == null && !isTemplate) {
+      indexer.removeValues(frame, slot);
+      indexer.addValues(frame, slot, values);
+    }
   }
 
   public Set<Frame> getFrames(Slot slot, Facet facet, boolean isTemplate,
@@ -159,6 +171,7 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
 
   public void deleteFrame(Frame frame) {
     delegate.deleteFrame(frame);
+    indexer.removeValues(frame);
   }
 
   public void close() {
