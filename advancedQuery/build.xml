@@ -1,5 +1,5 @@
 <?xml version = "1.0" encoding = "utf-8"?>
-<project name = "Developer Plugins" default = "compile" basedir = ".">    
+<project name = "Developer Plugins" default = "dist" basedir = ".">    
    <property name = "src" value = "./src"/>  
    <property name = "classes" value = "./classes"/>  
    <property name = "plugins" value = "../plugins"/>
@@ -9,7 +9,9 @@
 	
    <path id = "project.classpath">    
      <pathelement location = "${lib}/protege.jar"/>
+     <pathelement location = "${lib}/protege-owl.jar"/>
      <pathelement location = "./lib/lucene-core-2.0.1-dev.jar"/>
+     <pathelement location = "./lib/phonetix-0.2.jar"/>
    </path>
 
    <target name = "init">
@@ -31,7 +33,9 @@
           manifest = "${src}/META-INF/MANIFEST.MF"/>  
      <copy file = "./lib/lucene-core-2.0.1-dev.jar"
            todir = "${plugins}/${plugin_dist}"/>
-     <copy file = "./lib/protege-owl.jar"
+     <copy file = "./lib/phonetix-0.2.jar"
+           todir = "${plugins}/${plugin_dist}"/>
+     <copy file = "./plugin.properties"
            todir = "${plugins}/${plugin_dist}"/>
    </target>
 
