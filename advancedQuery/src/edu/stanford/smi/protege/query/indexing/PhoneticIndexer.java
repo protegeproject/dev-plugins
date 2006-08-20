@@ -2,15 +2,15 @@ package edu.stanford.smi.protege.query.indexing;
 
 import java.io.IOException;
 import java.io.StringReader;
-import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.Token;
+import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.index.IndexWriter;
@@ -31,10 +31,13 @@ import edu.stanford.smi.protege.model.FrameID;
 import edu.stanford.smi.protege.model.Slot;
 import edu.stanford.smi.protege.model.framestore.NarrowFrameStore;
 import edu.stanford.smi.protege.query.PhoneticQuery;
+import edu.stanford.smi.protege.query.QueryNarrowFrameStore;
 import edu.stanford.smi.protege.util.ApplicationProperties;
 import edu.stanford.smi.protege.util.Log;
 
-public class PhoneticIndexer implements Runnable {
+public class PhoneticIndexer  {
+  private transient static final Logger log = Log.getLogger(PhoneticIndexer.class);
+  
   private enum Status {
     INDEXING, READY, DOWN
   };
@@ -47,102 +50,266 @@ public class PhoneticIndexer implements Runnable {
   
   private Set<Slot> searchableSlots;
   
-  private static final String FRAME_LOCAL_FIELD    = "frameLocal";
-  private static final String FRAME_PROJECT_FIELD  = "frameProject";
-  private static final String SLOT_FIELD     = "slot";
-  private static final String CONTENTS_FIELD = "contents";
+  private static final String FRAME_LOCAL_FIELD         = "frameLocal";
+  private static final String FRAME_PROJECT_FIELD       = "frameProject";
+  private static final String SLOT_LOCAL_FIELD          = "slotLocal";
+  private static final String SLOT_PROJECT_FIELD        = "slotProject";
+  private static final String CONTENTS_FIELD            = "contents";
   
   public PhoneticIndexer(Set<Slot> searchableSlots, NarrowFrameStore delegate) {
     this.searchableSlots = searchableSlots;
     this.delegate = delegate;
   }
 
-  public void run() {
-
+  public IndexWriter openWriter(boolean create) throws IOException {
+    return new IndexWriter(getIndexPath(), analyzer, create);
   }
-
+  
+  public String getIndexPath() {
+    return indexPath;
+  }
   
   @SuppressWarnings("unchecked")
   public void indexOntologies() {
     long start = System.currentTimeMillis();
-    Log.getLogger().info("Started indexing ontology");
-    IndexWriter myWriter;
+    Log.getLogger().info("Started indexing ontology with " + searchableSlots.size() + " searchable slots");
+    IndexWriter myWriter = null;
     try {
-      myWriter = new IndexWriter(indexPath,
-                                 analyzer,
-                                 true);
-    } catch (IOException e) {
-      Log.getLogger().warning("Could not index ontologies because of I/O Error" + e);
-      status = Status.DOWN;
-      return;
-    }
-    for (Frame frame : delegate.getFrames()) {
-      for (Slot slot : searchableSlots) {
-        for (Object value : delegate.getValues(frame, slot, null, false)) {
-          if (!(value instanceof String)) {
-            continue;
-          }
-          String content = (String) value;
-          Document doc = new Document();
-          FrameID fid = frame.getFrameID();
-          doc.add(new Field(FRAME_LOCAL_FIELD, "" + fid.getLocalPart(), 
-                            Field.Store.YES, Field.Index.UN_TOKENIZED));
-          doc.add(new Field(FRAME_PROJECT_FIELD, "" + fid.getMemoryProjectPart(), 
-                            Field.Store.YES, Field.Index.UN_TOKENIZED));
-          doc.add(new Field(SLOT_FIELD, "" + slot.getFrameID().getLocalPart(),
-                            Field.Store.YES, Field.Index.UN_TOKENIZED));
-          doc.add(new Field(CONTENTS_FIELD, content, Field.Store.YES, Field.Index.TOKENIZED));
-          doc.add(new Field("title", "Frame = " + frame + ", Slot = " + slot, 
-                            Field.Store.YES, Field.Index.UN_TOKENIZED));
-          try {
-            myWriter.addDocument(doc);
-          } catch (IOException e) {
-            Log.getLogger().warning("Could not add frame slot value to searchable indicies - search will fail");
-            status = Status.DOWN;  // could imagine a partial status here...
-            return;
+      myWriter = openWriter(true);
+      for (Frame frame : delegate.getFrames()) {
+        for (Slot slot : searchableSlots) {
+          for (Object value : delegate.getValues(frame, slot, null, false)) {
+            if (!(value instanceof String)) {
+              continue;
+            }
+            addUpdate(myWriter, frame, slot, (String) value);
           }
         }
       }
-    }
-    try {
       myWriter.optimize();
-      myWriter.close();
+      status = Status.READY;
+      Log.getLogger().info("Finished indexing ontology (" 
+                           + ((System.currentTimeMillis() - start)/1000) + " seconds)");
     } catch (IOException ioe) {
-      Log.getLogger().log(Level.WARNING, "Exception closing writer", ioe);
-      status = Status.DOWN;
-      return;
+      died(ioe);
+    } finally {
+      forceClose(myWriter);
     }
-    status = Status.READY;
-    Log.getLogger().info("Finished indexing ontology (" 
-                         + ((System.currentTimeMillis() - start)/1000) + " seconds)");
   }
   
-  public Set<Frame> executeQuery(PhoneticQuery query) throws IOException {
-    Query luceneQuery = generateLuceneQuery(query)
-    Searcher searcher = new IndexSearcher(indexPath);
-    Hits hits = searcher.search(luceneQuery);
+  public void addUpdate(IndexWriter writer, Frame frame, Slot slot, String value) throws IOException {
+    if (status == Status.DOWN || !searchableSlots.contains(slot)) {
+      return;
+    }
+    Document doc = new Document();
+    FrameID fid = frame.getFrameID();
+    doc.add(new Field(FRAME_LOCAL_FIELD, "" + fid.getLocalPart(), 
+                      Field.Store.YES, Field.Index.UN_TOKENIZED));
+    doc.add(new Field(FRAME_PROJECT_FIELD, "" + fid.getMemoryProjectPart(), 
+                      Field.Store.YES, Field.Index.UN_TOKENIZED));
+    doc.add(new Field(SLOT_LOCAL_FIELD, "" + slot.getFrameID().getLocalPart(),
+                      Field.Store.YES, Field.Index.UN_TOKENIZED));
+    doc.add(new Field(SLOT_PROJECT_FIELD, "" + slot.getFrameID().getMemoryProjectPart(),
+                      Field.Store.YES, Field.Index.UN_TOKENIZED));
+    doc.add(new Field(CONTENTS_FIELD, value, Field.Store.YES, Field.Index.TOKENIZED));
+    writer.addDocument(doc);
+  }
+
+  public Set<Frame> executeQuery(PhoneticQuery pq) throws IOException {
+    if (status == Status.DOWN) {
+      return null;
+    }
+    Searcher searcher = null;
     Set<Frame> results = new HashSet<Frame>();
-    for (int i = 0; i < hits.length(); i++) {
-      Document doc = hits.doc(i);
-      int frameLocal = Integer.parseInt(doc.get(FRAME_LOCAL_FIELD));
-      int frameProject = Integer.parseInt(doc.get(FRAME_PROJECT_FIELD));
-      results.add(delegate.getFrame(FrameID.createLocal(frameProject, frameLocal)));
+    try {
+      Query luceneQuery = generateLuceneQuery(pq);
+      searcher = new IndexSearcher(getIndexPath());
+      Hits hits = searcher.search(luceneQuery);
+      for (int i = 0; i < hits.length(); i++) {
+        Document doc = hits.doc(i);
+        int frameLocal = Integer.parseInt(doc.get(FRAME_LOCAL_FIELD));
+        int frameProject = Integer.parseInt(doc.get(FRAME_PROJECT_FIELD));
+        results.add(delegate.getFrame(FrameID.createLocal(frameProject, frameLocal)));
+      }
+    } finally {
+      forceClose(searcher);
     }
     return results;
   }
   
   public Query generateLuceneQuery(PhoneticQuery pq) throws IOException {
-    String slot     = "" + pq.getSlot().getFrameID().getLocalPart();
-    String contents = "" + pq.getExpr();
+    String slotLocal   = "" + pq.getSlot().getFrameID().getLocalPart();
+    String slotProject = "" + pq.getSlot().getFrameID().getMemoryProjectPart();
+    String contents    = "" + pq.getExpr();
     BooleanQuery query = new  BooleanQuery();
+    
     TokenStream ts = analyzer.tokenStream(CONTENTS_FIELD, new StringReader(contents));
     Token tok;
     while ((tok = ts.next()) != null) {
       Term term = new Term(CONTENTS_FIELD, tok.termText());
       query.add(new TermQuery(term), BooleanClause.Occur.MUST);
     }
-    Term term = new Term(SLOT_FIELD, slot);
+    Term term = new Term(SLOT_LOCAL_FIELD, slotLocal);
+    query.add(new TermQuery(term), BooleanClause.Occur.MUST);
+    term = new Term(SLOT_PROJECT_FIELD, slotProject);
     query.add(new TermQuery(term), BooleanClause.Occur.MUST);
     return query;
+  }
+  
+  public Query generateLuceneQuery(Frame frame) throws IOException {
+    String frameLocal   = "" + frame.getFrameID().getLocalPart();
+    String frameProject = "" + frame.getFrameID().getMemoryProjectPart();
+    BooleanQuery query  = new  BooleanQuery();
+    
+    Term term;
+    term = new Term(FRAME_LOCAL_FIELD, frameLocal);
+    query.add(new TermQuery(term), BooleanClause.Occur.MUST);
+    term = new Term(FRAME_PROJECT_FIELD, frameProject);
+    query.add(new TermQuery(term), BooleanClause.Occur.MUST);
+    
+    return query;
+  }
+  
+  public Query generateLuceneQuery(Frame frame, Slot slot) throws IOException {
+    String frameLocal   = "" + frame.getFrameID().getLocalPart();
+    String frameProject = "" + frame.getFrameID().getMemoryProjectPart();
+    String slotLocal    = "" + slot.getFrameID().getLocalPart();
+    String slotProject  = "" + slot.getFrameID().getMemoryProjectPart();
+    BooleanQuery query  = new  BooleanQuery();
+    
+    Term term;
+    term = new Term(FRAME_LOCAL_FIELD, frameLocal);
+    query.add(new TermQuery(term), BooleanClause.Occur.MUST);
+    term = new Term(FRAME_PROJECT_FIELD, frameProject);
+    query.add(new TermQuery(term), BooleanClause.Occur.MUST);
+    term = new Term(SLOT_LOCAL_FIELD, slotLocal);
+    query.add(new TermQuery(term), BooleanClause.Occur.MUST);
+    term = new Term(SLOT_PROJECT_FIELD, slotProject);
+    query.add(new TermQuery(term), BooleanClause.Occur.MUST);
+    return query;
+  }
+  
+  private void died(IOException ioe) {
+    Log.getLogger().log(Level.WARNING, "Search index update failed",ioe);
+    status = Status.DOWN;
+  }
+  
+  private void forceClose(Searcher searcher) {
+    try {
+      if (searcher != null) {
+        searcher.close();
+      }
+    } catch (IOException ioe) {
+      Log.getLogger().log(Level.WARNING, "Exception caught closing files involved during search", ioe);
+    }
+  }
+  
+  private void forceClose(IndexWriter writer) {
+    try {
+      if (writer != null) {
+        writer.close();
+      }
+    } catch (IOException ioe) {
+      Log.getLogger().log(Level.WARNING, "Exception caught closing files involved in lucene indicies", ioe);
+    }
+  }
+  
+  
+  /* --------------------------------------------------------------------------
+   * Update Utilities for the Narrow Frame Store
+   */
+  
+  public void addValues(Frame frame, Slot slot, Collection values) { 
+    if (status == Status.DOWN || !searchableSlots.contains(slot)) {
+      return;
+    }
+    IndexWriter writer = null;
+    try {
+      long start = System.currentTimeMillis();
+      writer = openWriter(false);
+      for (Object value : values) {
+        if (value instanceof String) {
+          addUpdate(writer, frame, slot, (String) value);
+        }
+      }
+      writer.optimize();
+      if (log.isLoggable(Level.FINE)) {
+        log.fine("updated " + values.size() + " values in " + (System.currentTimeMillis() - start) + "ms");
+      }
+    } catch (IOException ioe) {
+      died(ioe);
+    } finally {
+      forceClose(writer);
+    }
+  }
+  
+  public void removeValue(Frame frame, Slot slot, Object value) {
+    if (status == Status.DOWN || !searchableSlots.contains(slot) || !(value instanceof String)) {
+      return;
+    }
+    IndexSearcher searcher = null;
+    try {
+      long start = System.currentTimeMillis();
+      searcher = new IndexSearcher(getIndexPath());
+      Hits hits = searcher.search(generateLuceneQuery(frame, slot));
+      for (int i = 0; i < hits.length(); i++) {
+        Document doc = hits.doc(i);
+        if (doc.get(CONTENTS_FIELD).equals(value)) {
+          searcher.getIndexReader().deleteDocument(hits.id(i));
+          break;
+        }
+      }
+      if (log.isLoggable(Level.FINE)) {
+        log.fine("remove value operation took " + (System.currentTimeMillis() - start) + "ms");
+      }
+    } catch (IOException ioe) {
+      died(ioe);
+    } finally {
+      forceClose(searcher);
+    }
+  }
+  
+  public void removeValues(Frame frame, Slot slot) {
+    if (status == Status.DOWN || !searchableSlots.contains(slot)) {
+      return;
+    }
+    IndexSearcher searcher = null;
+    try {
+      long start = System.currentTimeMillis();
+      searcher = new IndexSearcher(getIndexPath());
+      Hits hits = searcher.search(generateLuceneQuery(frame, slot));
+      for (int i = 0; i < hits.length(); i++) {
+        searcher.getIndexReader().deleteDocument(hits.id(i));
+      }
+      if (log.isLoggable(Level.FINE)) {
+        log.fine("remove values operation took " + (System.currentTimeMillis() - start) + "ms");
+      }
+    } catch (IOException ioe) {
+      died(ioe);
+    } finally {
+      forceClose(searcher);
+    }
+  }
+  
+  public void removeValues(Frame frame) {
+    if (status == Status.DOWN) {
+      return;
+    }
+    IndexSearcher searcher = null;
+    try {
+      long start = System.currentTimeMillis();
+      searcher = new IndexSearcher(getIndexPath());
+      Hits hits = searcher.search(generateLuceneQuery(frame));
+      for (int i = 0; i < hits.length(); i++) {
+        searcher.getIndexReader().deleteDocument(hits.id(i));
+      }
+      if (log.isLoggable(Level.FINE)) {
+        log.fine("remove values operation took " + (System.currentTimeMillis() - start) + "ms");
+      }
+    } catch (IOException ioe) {
+      died(ioe);
+    } finally {
+      forceClose(searcher);
+    }
   }
 }
