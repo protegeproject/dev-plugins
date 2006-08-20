@@ -7,11 +7,6 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.apache.lucene.index.IndexWriter;
-import org.apache.lucene.search.IndexSearcher;
-import org.apache.lucene.search.Searcher;
-
-import edu.stanford.smi.protege.model.Cls;
 import edu.stanford.smi.protege.model.Facet;
 import edu.stanford.smi.protege.model.Frame;
 import edu.stanford.smi.protege.model.FrameID;
@@ -24,6 +19,8 @@ import edu.stanford.smi.protege.util.Log;
 import edu.stanford.smi.protege.util.transaction.TransactionMonitor;
 
 public class QueryNarrowFrameStore implements NarrowFrameStore {
+  private static transient Logger log = Log.getLogger(QueryNarrowFrameStore.class);
+  
   private NarrowFrameStore delegate;
   private String name;
 
@@ -37,11 +34,6 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
     this.delegate = delegate;
     indexer = new PhoneticIndexer(searchableSlots, delegate);
     indexer.indexOntologies();
-    /*
-    Thread luceneThread = new Thread("Lucene Indexing Thread",  indexer);
-    luceneThread.setPriority(Thread.MIN_PRIORITY);
-    luceneThread.start();
-    */
   }
   
  
@@ -104,7 +96,9 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
 
   public void addValues(Frame frame, Slot slot, Facet facet,
                         boolean isTemplate, Collection values) {
-    
+    if (log.isLoggable(Level.FINE)) {
+      log.fine("addValues");
+    }
     delegate.addValues(frame, slot, facet, isTemplate, values);
     if (facet == null && !isTemplate) {
       indexer.addValues(frame, slot, values);
@@ -118,6 +112,9 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
 
   public void removeValue(Frame frame, Slot slot, Facet facet,
                           boolean isTemplate, Object value) {
+    if (log.isLoggable(Level.FINE)) {
+      log.fine("Remove  Value");
+    }
     delegate.removeValue(frame, slot, facet, isTemplate, value);
     if (facet == null && !isTemplate) {
       indexer.removeValue(frame, slot, value);
@@ -126,6 +123,9 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
 
   public void setValues(Frame frame, Slot slot, Facet facet,
                         boolean isTemplate, Collection values) {
+    if (log.isLoggable(Level.FINE)) {
+      log.fine("setValues");
+    }
     delegate.setValues(frame, slot, facet, isTemplate, values);
     if (facet == null && !isTemplate) {
       indexer.removeValues(frame, slot);
@@ -170,6 +170,9 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
   }
 
   public void deleteFrame(Frame frame) {
+    if (log.isLoggable(Level.FINE)) {
+      log.fine("deleteFrame ");
+    }
     delegate.deleteFrame(frame);
     indexer.removeValues(frame);
   }
