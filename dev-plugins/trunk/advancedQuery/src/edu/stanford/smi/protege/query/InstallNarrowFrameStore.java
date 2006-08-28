@@ -43,6 +43,7 @@ public class InstallNarrowFrameStore extends ProtegeJob {
       slots.addAll(owl.getOWLAnnotationProperties());
       slots.add((Slot) owl.getRDFProperty(RDF_LABEL));
       slots.add((Slot) owl.getRDFProperty(RDF_COMMENT));
+      slots.add(kb.getSystemFrames().getNameSlot());
       return slots;
     } else {
       slots.addAll(kb.getSlots());
