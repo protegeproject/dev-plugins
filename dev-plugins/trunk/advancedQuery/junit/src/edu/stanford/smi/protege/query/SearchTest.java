@@ -9,9 +9,13 @@ import junit.framework.TestCase;
 import edu.stanford.smi.protege.model.Frame;
 import edu.stanford.smi.protege.model.Project;
 import edu.stanford.smi.protege.model.Slot;
+import edu.stanford.smi.protege.model.query.Query;
+import edu.stanford.smi.protege.query.querytypes.OWLRestrictionQuery;
+import edu.stanford.smi.protege.query.querytypes.PhoneticQuery;
 import edu.stanford.smi.protege.util.Log;
 import edu.stanford.smi.protegex.owl.model.OWLClass;
 import edu.stanford.smi.protegex.owl.model.OWLModel;
+import edu.stanford.smi.protegex.owl.model.OWLProperty;
 import edu.stanford.smi.protegex.owl.model.RDFProperty;
 
 public class SearchTest extends TestCase {
@@ -40,31 +44,45 @@ public class SearchTest extends TestCase {
     }
   }
   
-  public static void checkSearch(OWLModel om, Slot slot, String search, String frameName, boolean succeed) {
+  public static void checkSearch(OWLModel om, Query query, String frameName, boolean succeed) {
     boolean found = false;
-    PhoneticQuery pq = new PhoneticQuery(slot, search);
-    for (Frame frame : om.getHeadFrameStore().executeQuery(pq)) {
+    for (Frame frame : om.getHeadFrameStore().executeQuery(query)) {
       assertTrue(frame.getName().equals(frameName));
       found = true;
     }
     assertTrue(succeed == found);
   }
   
+  public static void checkPhoneticSearch(OWLModel om, Slot slot, String search, String frameName, boolean succeed) {
+    checkSearch(om, new PhoneticQuery(slot, search), frameName, succeed);
+  }
+  
   /* ---------------------------------------------------------------------
    * Tests
    */
 
+  @SuppressWarnings("deprecation")
+  public static void testOWLRestriction1() {
+    if (log.isLoggable(Level.FINE)) {
+      log.fine("owl restriction test (#1)");
+    }
+    OWLModel om = getOWLModel();
+    Slot nameSlot = om.getSystemFrames().getNameSlot();
+    OWLProperty property = om.getOWLProperty("hasTopping");
+    OWLRestrictionQuery oquery = new OWLRestrictionQuery(om, property, new PhoneticQuery(nameSlot, "CheeseTopping"));
+    checkSearch(om, oquery, "CheeseyPizza", true);
+  }
 
   public static void testBasicSearch() {
     if (log.isLoggable(Level.FINE)) {
       log.fine("basic search test");
     }
     OWLModel om = getOWLModel();
-    checkSearch(om, om.getRDFProperty("rdfs:comment"), "A class to demonstrate mistakes made", "IceCream", true);
-    checkSearch(om, om.getRDFProperty("rdfs:comment"), "A Klass to demonstrate mistakes made", "IceCream", true);
-    checkSearch(om, om.getRDFProperty("rdfs:comment"), "A Klass to demonstrate mistaques made", "IceCream", true);
-    checkSearch(om, om.getRDFProperty("rdfs:comment"), "A Klass to demonstrate missedakes made", "IceCream", true);
-    checkSearch(om, om.getRDFProperty("rdfs:comment"), "A Klass to demonstrate mistaches made", "IceCream", false);
+    checkPhoneticSearch(om, om.getRDFProperty("rdfs:comment"), "A class to demonstrate mistakes made", "IceCream", true);
+    checkPhoneticSearch(om, om.getRDFProperty("rdfs:comment"), "A Klass to demonstrate mistakes made", "IceCream", true);
+    checkPhoneticSearch(om, om.getRDFProperty("rdfs:comment"), "A Klass to demonstrate mistaques made", "IceCream", true);
+    checkPhoneticSearch(om, om.getRDFProperty("rdfs:comment"), "A Klass to demonstrate missedakes made", "IceCream", true);
+    checkPhoneticSearch(om, om.getRDFProperty("rdfs:comment"), "A Klass to demonstrate mistaches made", "IceCream", false);
     Log.getLogger().info("Done");
   }
   
@@ -74,7 +92,7 @@ public class SearchTest extends TestCase {
     }
     OWLModel om = getOWLModel();
     om.getOWLNamedClass("IceCream").delete();
-    checkSearch(om, om.getRDFProperty("rdfs:comment"), "A class to demonstrate mistakes made", "IceCream", false);
+    checkPhoneticSearch(om, om.getRDFProperty("rdfs:comment"), "A class to demonstrate mistakes made", "IceCream", false);
   }
   
   public static void testSetValues() {
@@ -85,7 +103,7 @@ public class SearchTest extends TestCase {
     OWLClass iceCream = om.getOWLNamedClass("IceCream");
     RDFProperty comment = om.getRDFProperty("rdfs:comment");
     iceCream.setPropertyValue(comment, "This is a real klass.  Don't make derogatory comments.");
-    checkSearch(om, comment, "class derogatory", "IceCream", true);
+    checkPhoneticSearch(om, comment, "class derogatory", "IceCream", true);
   }
   
   public static void testAddValues() {
@@ -96,7 +114,9 @@ public class SearchTest extends TestCase {
     OWLClass iceCream = om.getOWLNamedClass("IceCream");
     RDFProperty comment = om.getRDFProperty("rdfs:comment");
     iceCream.addPropertyValue(comment, "But this class doesn't fit well with pizza.  And the comment wasn't derogatory.");
-    checkSearch(om, comment, "duznt derogatory", "IceCream", true);
+    checkPhoneticSearch(om, comment, "duznt derogatory", "IceCream", true);
   }
+  
+
 
 }
