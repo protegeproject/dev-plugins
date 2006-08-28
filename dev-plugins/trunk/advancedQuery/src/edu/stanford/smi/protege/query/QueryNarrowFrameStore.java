@@ -2,11 +2,13 @@ package edu.stanford.smi.protege.query;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import edu.stanford.smi.protege.model.Cls;
 import edu.stanford.smi.protege.model.Facet;
 import edu.stanford.smi.protege.model.Frame;
 import edu.stanford.smi.protege.model.FrameID;
@@ -14,7 +16,9 @@ import edu.stanford.smi.protege.model.Reference;
 import edu.stanford.smi.protege.model.Slot;
 import edu.stanford.smi.protege.model.framestore.NarrowFrameStore;
 import edu.stanford.smi.protege.model.query.Query;
-import edu.stanford.smi.protege.query.indexing.PhoneticIndexer;
+import edu.stanford.smi.protege.query.querytypes.OWLRestrictionQuery;
+import edu.stanford.smi.protege.query.querytypes.OwnSlotValueQuery;
+import edu.stanford.smi.protege.query.querytypes.PhoneticQuery;
 import edu.stanford.smi.protege.util.Log;
 import edu.stanford.smi.protege.util.transaction.TransactionMonitor;
 
@@ -36,10 +40,45 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
     indexer.indexOntologies();
   }
   
+
+  /*---------------------------------------------------------------------
+   * executeQuery methods
+   */
+  
+  public Set<Frame> executeQuery(Query query) {
+    return delegate.executeQuery(query);
+  }
+  
+  public Set<Frame> executeQuery(PhoneticQuery query) {
+    try {
+      return indexer.executeQuery(query);
+    } catch (IOException ioe) {
+      Log.getLogger().log(Level.WARNING, "Search failed", ioe);
+      return null;
+    } 
+  }
+  
+  public Set<Frame> executeQuery(OWLRestrictionQuery query) {
+    Query innerQuery = query.getInnerQuery();
+    Set<Frame> frames = executeQuery(innerQuery);
+    Set<Frame> results = new HashSet<Frame>();
+    for (Frame frame : frames) {
+      if (frame instanceof Cls) {
+        results.addAll(query.executeQueryBasedOnQueryResult((Cls) frame, getDelegate()));
+      }
+    }
+    return results;
+  }
+  
+  public Set<Frame> executeQuery(OwnSlotValueQuery query) {
+    return delegate.getMatchingFrames(query.getSlot(), null, false, query.getExpr(), -1);
+  }
+  
  
   /*---------------------------------------------------------------------
-   *  Common Narrow Frame Store Functions
+   *  Common Narrow Frame Store Functions (excepting executeQuery)
    */
+
   
   public String getName() {
     return name;
@@ -155,18 +194,6 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
 
   public Set<Reference> getMatchingReferences(String value, int maxMatches) {
     return delegate.getMatchingReferences(value, maxMatches);
-  }
-
-  public Set<Frame> executeQuery(Query query) {
-    if (!(query instanceof PhoneticQuery)) {
-      return delegate.executeQuery(query);
-    }
-    try {
-      return indexer.executeQuery((PhoneticQuery) query);
-    } catch (IOException ioe) {
-      Log.getLogger().log(Level.WARNING, "Search failed", ioe);
-      return null;
-    }
   }
 
   public void deleteFrame(Frame frame) {
