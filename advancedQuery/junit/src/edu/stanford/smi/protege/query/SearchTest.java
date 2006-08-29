@@ -2,6 +2,7 @@ package edu.stanford.smi.protege.query;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -11,13 +12,13 @@ import edu.stanford.smi.protege.model.Project;
 import edu.stanford.smi.protege.model.Slot;
 import edu.stanford.smi.protege.model.query.Query;
 import edu.stanford.smi.protege.query.querytypes.OWLRestrictionQuery;
+import edu.stanford.smi.protege.query.querytypes.OrQuery;
 import edu.stanford.smi.protege.query.querytypes.OwnSlotValueQuery;
 import edu.stanford.smi.protege.query.querytypes.PhoneticQuery;
 import edu.stanford.smi.protege.util.Log;
 import edu.stanford.smi.protegex.owl.model.OWLClass;
 import edu.stanford.smi.protegex.owl.model.OWLModel;
 import edu.stanford.smi.protegex.owl.model.OWLProperty;
-import edu.stanford.smi.protegex.owl.model.ProtegeNames;
 import edu.stanford.smi.protegex.owl.model.RDFProperty;
 
 public class SearchTest extends TestCase {
@@ -29,10 +30,12 @@ public class SearchTest extends TestCase {
   
   public static OWLModel getOWLModel() {
     List errors = new ArrayList();  
+    System.out.println("Starting to build owl model");
     Project project = new Project("advancedQuery/junit/projects/Pizza.pprj", errors);
     checkErrors(errors);
     OWLModel om = (OWLModel) project.getKnowledgeBase();
     new InstallNarrowFrameStore(om).execute();
+    System.out.println("loading owl model " + om);
     return om;
   }
   
@@ -64,15 +67,7 @@ public class SearchTest extends TestCase {
    */
 
 
-  public static void testOwnSlotValue() {
-    if (log.isLoggable(Level.FINE)) {
-      log.fine("own slot value");
-    }
-    OWLModel om = getOWLModel();
-    RDFProperty comment = om.getRDFProperty("rdfs:comment");
-    OwnSlotValueQuery query = new OwnSlotValueQuery(comment, "*Countries can only be either*");
-    checkSearch(om, query, "Country", true);
-  }
+
 
   public static void testBasicSearch() {
     if (log.isLoggable(Level.FINE)) {
@@ -132,6 +127,51 @@ public class SearchTest extends TestCase {
   }
   
 
+  public static void testOwnSlotValue() {
+    if (log.isLoggable(Level.FINE)) {
+      log.fine("own slot value");
+    }
+    OWLModel om = getOWLModel();
+    RDFProperty comment = om.getRDFProperty("rdfs:comment");
+    OwnSlotValueQuery query = new OwnSlotValueQuery(comment, "*Countries can only be either*");
+    checkSearch(om, query, "Country", true);
+  }
+  
+  public static void testOrQuery() {
+    if (log.isLoggable(Level.FINE)) {
+      log.fine("testOrQuery");
+    }
+    OWLModel om = getOWLModel();
+    RDFProperty comment = om.getRDFProperty("rdfs:comment");
+    RDFProperty label   = om.getRDFProperty("rdfs:label");
+    List<Query> queries = new ArrayList<Query>();
+    Query q1 = new OwnSlotValueQuery(comment, "*at least 1 cheese*");
+    queries.add(q1);
+    Query q2 = new PhoneticQuery(label, "BaseEspzza");
+    queries.add(q2);
+    Query q = new OrQuery(queries);
+    Set<Frame> frames = om.getHeadFrameStore().executeQuery(q);
+    assertEquals(2, frames.size());
+    Frame deepBase = om.getOWLNamedClass("DeepPanBase");
+    assertTrue(frames.contains(deepBase));
+    Frame cheesey = om.getOWLNamedClass("CheeseyPizza");
+    assertTrue(frames.contains(cheesey));
 
-
+    queries = new ArrayList<Query>();
+    Query q3 = new PhoneticQuery(label, "BaseEsprzza");
+    queries.add(q1);
+    queries.add(q3);
+    q = new OrQuery(queries);
+    frames = om.getHeadFrameStore().executeQuery(q);
+    assertEquals(1, frames.size());
+    assertTrue(frames.contains(cheesey));
+    
+    queries = new ArrayList<Query>();
+    queries.add(q3);
+    queries.add(q1);
+    q = new OrQuery(queries);
+    frames = om.getHeadFrameStore().executeQuery(q);
+    assertEquals(1, frames.size());
+    assertTrue(frames.contains(cheesey));
+  }
 }
