@@ -11,11 +11,13 @@ import edu.stanford.smi.protege.model.Project;
 import edu.stanford.smi.protege.model.Slot;
 import edu.stanford.smi.protege.model.query.Query;
 import edu.stanford.smi.protege.query.querytypes.OWLRestrictionQuery;
+import edu.stanford.smi.protege.query.querytypes.OwnSlotValueQuery;
 import edu.stanford.smi.protege.query.querytypes.PhoneticQuery;
 import edu.stanford.smi.protege.util.Log;
 import edu.stanford.smi.protegex.owl.model.OWLClass;
 import edu.stanford.smi.protegex.owl.model.OWLModel;
 import edu.stanford.smi.protegex.owl.model.OWLProperty;
+import edu.stanford.smi.protegex.owl.model.ProtegeNames;
 import edu.stanford.smi.protegex.owl.model.RDFProperty;
 
 public class SearchTest extends TestCase {
@@ -61,16 +63,15 @@ public class SearchTest extends TestCase {
    * Tests
    */
 
-  @SuppressWarnings("deprecation")
-  public static void testOWLRestriction1() {
+
+  public static void testOwnSlotValue() {
     if (log.isLoggable(Level.FINE)) {
-      log.fine("owl restriction test (#1)");
+      log.fine("own slot value");
     }
     OWLModel om = getOWLModel();
-    Slot nameSlot = om.getSystemFrames().getNameSlot();
-    OWLProperty property = om.getOWLProperty("hasTopping");
-    OWLRestrictionQuery oquery = new OWLRestrictionQuery(om, property, new PhoneticQuery(nameSlot, "CheeseTopping"));
-    checkSearch(om, oquery, "CheeseyPizza", true);
+    RDFProperty comment = om.getRDFProperty("rdfs:comment");
+    OwnSlotValueQuery query = new OwnSlotValueQuery(comment, "*Countries can only be either*");
+    checkSearch(om, query, "Country", true);
   }
 
   public static void testBasicSearch() {
@@ -117,6 +118,20 @@ public class SearchTest extends TestCase {
     checkPhoneticSearch(om, comment, "duznt derogatory", "IceCream", true);
   }
   
+  
+  @SuppressWarnings("deprecation")
+  public static void testOWLRestriction() {
+    if (log.isLoggable(Level.FINE)) {
+      log.fine("owl restriction test (#1)");
+    }
+    OWLModel om = getOWLModel();
+    Slot nameSlot = om.getSystemFrames().getNameSlot();
+    OWLProperty property = om.getOWLProperty("hasTopping");
+    OWLRestrictionQuery oquery = new OWLRestrictionQuery(om, property, new PhoneticQuery(nameSlot, "CheeseTopping"));
+    checkSearch(om, oquery, "CheeseyPizza", true);
+  }
+  
+
 
 
 }
