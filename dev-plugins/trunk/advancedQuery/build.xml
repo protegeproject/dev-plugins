@@ -4,6 +4,7 @@
    <property name = "classes" value = "./classes"/>  
    <property name = "plugins" value = "../plugins"/>
    <property name = "lib" value = "../lib"/>
+   <property name = "junit" value = "./junit"/>
    <property name = "plugin_dist" value = "edu.stanford.smi.protege.advancedQuery"/>
    <property name = "pluginName" value = "advancedQueryPlugin"/>
 	
@@ -43,6 +44,38 @@
      <zip basedir = "${plugins}"
           includes = "${plugin_dist}/**"
           destfile = "${plugins}/${pluginName}.zip"/>
+   </target>
+
+
+   <target name = "junit-compile" depends = "compile">    
+     <javac srcdir = "${junit}" destdir = "${classes}" debug="on">
+       <classpath refid = "project.classpath"/>    
+     </javac>    
+   </target>
+
+   <target name = "junit" 
+           description = "run the tests (anybody can do it)"
+           depends = "junit-compile">
+     <property file="junit.properties"/>
+     <junit haltonfailure = "on" 
+            dir = ".." fork = "yes">
+        <classpath>
+           <pathelement location="${classes}"/>
+           <pathelement location = "${lib}/protege.jar"/>
+           <pathelement location = "./lib/lucene-core-2.0.1-dev.jar"/>
+           <pathelement location = "./lib/phonetix-0.2.jar"/>
+           <fileset
+              dir="${junit.protege.dir}/plugins/edu.stanford.smi.protegex.owl">
+              <include name = "**/*.jar"/>
+           </fileset>
+        </classpath>
+        <jvmarg value="-Dprotege.dir=${junit.protege.dir}"/>
+        <batchtest>
+           <fileset dir="${junit}/src">
+             <include name = "**/*Test.java"/>
+           </fileset>
+        </batchtest>
+     </junit>
    </target>
 
    <target name = "clean">
