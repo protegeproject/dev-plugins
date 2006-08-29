@@ -55,8 +55,11 @@
 
    <target name = "junit" 
            description = "run the tests (anybody can do it)"
-           depends = "junit-compile">
+           depends = "dist,junit-compile">
      <property file="junit.properties"/>
+     <unzip src = "${plugins}/${pluginName}.zip"
+            dest = "${junit.protege.dir}/plugins"
+            overwrite="yes"/>
      <junit haltonfailure = "on" 
             printsummary="withOutAndErr"
             dir = ".." fork = "yes">
