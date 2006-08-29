@@ -58,6 +58,7 @@
            depends = "junit-compile">
      <property file="junit.properties"/>
      <junit haltonfailure = "on" 
+            printsummary="withOutAndErr"
             dir = ".." fork = "yes">
         <classpath>
            <pathelement location="${classes}"/>
