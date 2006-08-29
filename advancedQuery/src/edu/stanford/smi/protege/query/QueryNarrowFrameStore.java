@@ -3,6 +3,7 @@ package edu.stanford.smi.protege.query;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.logging.Level;
@@ -16,7 +17,9 @@ import edu.stanford.smi.protege.model.Reference;
 import edu.stanford.smi.protege.model.Slot;
 import edu.stanford.smi.protege.model.framestore.NarrowFrameStore;
 import edu.stanford.smi.protege.model.query.Query;
+import edu.stanford.smi.protege.query.querytypes.AndQuery;
 import edu.stanford.smi.protege.query.querytypes.OWLRestrictionQuery;
+import edu.stanford.smi.protege.query.querytypes.OrQuery;
 import edu.stanford.smi.protege.query.querytypes.OwnSlotValueQuery;
 import edu.stanford.smi.protege.query.querytypes.PhoneticQuery;
 import edu.stanford.smi.protege.util.Log;
@@ -46,7 +49,24 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
    */
   
   public Set<Frame> executeQuery(Query query) {
-    return delegate.executeQuery(query);
+    if (query instanceof PhoneticQuery) {
+      return executeQuery((PhoneticQuery) query);
+    }
+    else if (query instanceof OWLRestrictionQuery) {
+      return executeQuery((OWLRestrictionQuery) query);
+    }
+    else if (query instanceof OwnSlotValueQuery) {
+      return  executeQuery((OwnSlotValueQuery) query);
+    }
+    else if (query instanceof AndQuery) {
+      return executeQuery((AndQuery) query);
+    }
+    else if (query instanceof OrQuery) {
+      return executeQuery((OrQuery) query);
+    }
+    else {
+      return delegate.executeQuery(query);
+    }
   }
   
   public Set<Frame> executeQuery(PhoneticQuery query) {
@@ -72,6 +92,29 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
   
   public Set<Frame> executeQuery(OwnSlotValueQuery query) {
     return delegate.getMatchingFrames(query.getSlot(), null, false, query.getExpr(), -1);
+  }
+  
+  public Set<Frame> executeQuery(AndQuery query) {
+    Collection<Query> conjuncts = query.getConjuncts();
+    if (conjuncts.isEmpty()) {
+      return delegate.getFrames();
+    }
+    Iterator<Query> conjunctIterator = conjuncts.iterator();
+    Query conjunct = conjunctIterator.next();
+    Set<Frame> results = executeQuery(conjunct);
+    while (conjunctIterator.hasNext()) {
+      conjunct = conjunctIterator.next();
+      results.retainAll(executeQuery(conjunct));
+    }
+    return results;
+  }
+  
+  public Set<Frame> executeQuery(OrQuery query) {
+    Set<Frame> results = new HashSet<Frame>();
+    for (Query q : query.getDisjuncts()) {
+      results.addAll(executeQuery(q));
+    }
+    return results;
   }
   
  
