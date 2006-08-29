@@ -11,6 +11,7 @@ import edu.stanford.smi.protege.model.Frame;
 import edu.stanford.smi.protege.model.Project;
 import edu.stanford.smi.protege.model.Slot;
 import edu.stanford.smi.protege.model.query.Query;
+import edu.stanford.smi.protege.query.querytypes.AndQuery;
 import edu.stanford.smi.protege.query.querytypes.OWLRestrictionQuery;
 import edu.stanford.smi.protege.query.querytypes.OrQuery;
 import edu.stanford.smi.protege.query.querytypes.OwnSlotValueQuery;
@@ -30,12 +31,10 @@ public class SearchTest extends TestCase {
   
   public static OWLModel getOWLModel() {
     List errors = new ArrayList();  
-    System.out.println("Starting to build owl model");
     Project project = new Project("advancedQuery/junit/projects/Pizza.pprj", errors);
     checkErrors(errors);
     OWLModel om = (OWLModel) project.getKnowledgeBase();
     new InstallNarrowFrameStore(om).execute();
-    System.out.println("loading owl model " + om);
     return om;
   }
   
@@ -65,9 +64,6 @@ public class SearchTest extends TestCase {
   /* ---------------------------------------------------------------------
    * Tests
    */
-
-
-
 
   public static void testBasicSearch() {
     if (log.isLoggable(Level.FINE)) {
@@ -171,6 +167,28 @@ public class SearchTest extends TestCase {
     queries.add(q1);
     q = new OrQuery(queries);
     frames = om.getHeadFrameStore().executeQuery(q);
+    assertEquals(1, frames.size());
+    assertTrue(frames.contains(cheesey));
+  }
+  
+  public static void testAndQuery() {
+    if (log.isLoggable(Level.FINE)) {
+      log.fine("and query");
+    }
+    OWLModel om = getOWLModel();
+    RDFProperty comment = om.getRDFProperty("rdfs:comment");
+    RDFProperty label   = om.getRDFProperty("rdfs:label");
+    
+    List<Query> queries = new ArrayList<Query>();
+    Query q1 = new PhoneticQuery(label, "PizzaComQueijo");
+    queries.add(q1);
+    // Here is a tricky point - the actual comment slot for cheesey pizza starts with "~#en " 
+    // to represent the English language.
+    Query q2 = new OwnSlotValueQuery(comment, "*Any pizza*");
+    queries.add(q2);
+    Query q = new AndQuery(queries);
+    OWLClass cheesey = om.getOWLNamedClass("CheeseyPizza");
+    Set<Frame> frames = om.getHeadFrameStore().executeQuery(q);
     assertEquals(1, frames.size());
     assertTrue(frames.contains(cheesey));
   }
