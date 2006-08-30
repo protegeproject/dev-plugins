@@ -29,7 +29,7 @@ public class InstallNarrowFrameStore extends ProtegeJob {
     SimpleFrameStore fs = (SimpleFrameStore) kb.getTerminalFrameStore();
     NarrowFrameStore nfs = fs.getHelper();
     
-    QueryNarrowFrameStore qnfs = new QueryNarrowFrameStore(nfs, getSearchableSlots());
+    QueryNarrowFrameStore qnfs = new QueryNarrowFrameStore(nfs, getSearchableSlots(), getKnowledgeBase());
     fs.setHelper(qnfs);
     return new Boolean(true);
   }
