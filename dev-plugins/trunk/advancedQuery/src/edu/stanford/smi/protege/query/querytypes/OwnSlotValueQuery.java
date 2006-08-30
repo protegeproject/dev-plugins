@@ -1,7 +1,9 @@
 package edu.stanford.smi.protege.query.querytypes;
 
+import edu.stanford.smi.protege.model.KnowledgeBase;
 import edu.stanford.smi.protege.model.Slot;
 import edu.stanford.smi.protege.model.query.Query;
+import edu.stanford.smi.protege.util.LocalizeUtils;
 
 public class OwnSlotValueQuery implements Query {
   private Slot slot;
@@ -18,6 +20,10 @@ public class OwnSlotValueQuery implements Query {
 
   public Slot getSlot() {
     return slot;
+  }
+
+  public void localize(KnowledgeBase kb) {
+    LocalizeUtils.localize(slot, kb);
   }
 
 }
