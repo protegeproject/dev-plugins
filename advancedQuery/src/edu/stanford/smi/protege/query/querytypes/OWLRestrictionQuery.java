@@ -5,9 +5,11 @@ import java.util.Set;
 
 import edu.stanford.smi.protege.model.Cls;
 import edu.stanford.smi.protege.model.Frame;
+import edu.stanford.smi.protege.model.KnowledgeBase;
 import edu.stanford.smi.protege.model.Slot;
 import edu.stanford.smi.protege.model.framestore.NarrowFrameStore;
 import edu.stanford.smi.protege.model.query.Query;
+import edu.stanford.smi.protege.util.LocalizeUtils;
 import edu.stanford.smi.protegex.owl.model.OWLModel;
 import edu.stanford.smi.protegex.owl.model.OWLNames;
 import edu.stanford.smi.protegex.owl.model.OWLProperty;
@@ -138,6 +140,19 @@ public class OWLRestrictionQuery implements Query {
       return getListHead(previousEntry, nfs);
     }
     return listEntry;
+  }
+
+  public void localize(KnowledgeBase kb) {
+    LocalizeUtils.localize(equivalentClass, kb);
+    LocalizeUtils.localize(someValuesFrom, kb);
+    LocalizeUtils.localize(onProperty, kb);
+    LocalizeUtils.localize(owlIntersectionOf, kb);
+    LocalizeUtils.localize(rdfFirst, kb);
+    LocalizeUtils.localize(rdfRest, kb);
+    LocalizeUtils.localize(directSubclasses, kb);
+    LocalizeUtils.localize(nameSlot, kb);
+    LocalizeUtils.localize(property, kb);
+    query.localize(kb);
   }
 
 }
