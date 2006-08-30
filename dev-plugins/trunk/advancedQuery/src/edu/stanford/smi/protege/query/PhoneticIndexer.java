@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -41,6 +42,8 @@ public class PhoneticIndexer  {
     INDEXING, READY, DOWN
   };
   
+  private Object kbLock;
+  
   private String indexPath = ApplicationProperties.getApplicationDirectory().getAbsolutePath() + "/lucene";
   
   private Analyzer analyzer = new PhoneticAnalyzer(new DoubleMetaphone(200));
@@ -55,9 +58,10 @@ public class PhoneticIndexer  {
   private static final String SLOT_PROJECT_FIELD        = "slotProject";
   private static final String CONTENTS_FIELD            = "contents";
   
-  public PhoneticIndexer(Set<Slot> searchableSlots, NarrowFrameStore delegate) {
+  public PhoneticIndexer(Set<Slot> searchableSlots, NarrowFrameStore delegate, Object kbLock) {
     this.searchableSlots = searchableSlots;
     this.delegate = delegate;
+    this.kbLock = kbLock;
   }
 
   public IndexWriter openWriter(boolean create) throws IOException {
@@ -75,9 +79,17 @@ public class PhoneticIndexer  {
     IndexWriter myWriter = null;
     try {
       myWriter = openWriter(true);
-      for (Frame frame : delegate.getFrames()) {
+      Set<Frame> frames;
+      synchronized (kbLock) {
+        frames = delegate.getFrames();
+      }
+      for (Frame frame : frames) {
         for (Slot slot : searchableSlots) {
-          for (Object value : delegate.getValues(frame, slot, null, false)) {
+          List values;
+          synchronized (kbLock) {
+            values = delegate.getValues(frame, slot, null, false);
+          }
+          for (Object value : values) {
             if (!(value instanceof String)) {
               continue;
             }
@@ -128,7 +140,9 @@ public class PhoneticIndexer  {
         Document doc = hits.doc(i);
         int frameLocal = Integer.parseInt(doc.get(FRAME_LOCAL_FIELD));
         int frameProject = Integer.parseInt(doc.get(FRAME_PROJECT_FIELD));
-        results.add(delegate.getFrame(FrameID.createLocal(frameProject, frameLocal)));
+        synchronized (kbLock) {
+          results.add(delegate.getFrame(FrameID.createLocal(frameProject, frameLocal)));
+        }
       }
     } finally {
       forceClose(searcher);
