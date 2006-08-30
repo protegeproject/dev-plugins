@@ -9,6 +9,9 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import edu.stanford.smi.protege.exception.OntologyException;
+import edu.stanford.smi.protege.exception.ProtegeError;
+import edu.stanford.smi.protege.exception.ProtegeIOException;
 import edu.stanford.smi.protege.model.Cls;
 import edu.stanford.smi.protege.model.Facet;
 import edu.stanford.smi.protege.model.Frame;
@@ -17,6 +20,8 @@ import edu.stanford.smi.protege.model.Reference;
 import edu.stanford.smi.protege.model.Slot;
 import edu.stanford.smi.protege.model.framestore.NarrowFrameStore;
 import edu.stanford.smi.protege.model.query.Query;
+import edu.stanford.smi.protege.model.query.QueryCallback;
+import edu.stanford.smi.protege.model.query.SynchronizeQueryCallback;
 import edu.stanford.smi.protege.query.querytypes.AndQuery;
 import edu.stanford.smi.protege.query.querytypes.OWLRestrictionQuery;
 import edu.stanford.smi.protege.query.querytypes.OrQuery;
@@ -28,6 +33,8 @@ import edu.stanford.smi.protege.util.transaction.TransactionMonitor;
 public class QueryNarrowFrameStore implements NarrowFrameStore {
   private static transient Logger log = Log.getLogger(QueryNarrowFrameStore.class);
   
+  private Object kbLock;
+  
   private NarrowFrameStore delegate;
   private String name;
 
@@ -37,10 +44,11 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
    * Query Narrow Frame Store support methods.
    */
   
-  public QueryNarrowFrameStore(NarrowFrameStore delegate, Set<Slot> searchableSlots) {
+  public QueryNarrowFrameStore(NarrowFrameStore delegate, Set<Slot> searchableSlots, Object kbLock) {
     this.delegate = delegate;
-    indexer = new PhoneticIndexer(searchableSlots, delegate);
+    indexer = new PhoneticIndexer(searchableSlots, delegate, kbLock);
     indexer.indexOntologies();
+    this.kbLock = kbLock;
   }
   
 
@@ -48,7 +56,24 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
    * executeQuery methods
    */
   
-  public Set<Frame> executeQuery(Query query) {
+  public void executeQuery(final Query query, final QueryCallback qc) {
+    new Thread() {
+      public void run() {
+        try {
+          Set<Frame> results = executeQuery(query);
+          qc.provideQueryResults(results);
+        } catch (OntologyException oe) {
+          qc.handleError(oe);
+        } catch (ProtegeIOException ioe) {
+          qc.handleError(ioe);
+        } catch (Throwable  t) {
+          qc.handleError(new ProtegeError(t));
+        }
+      }
+    }.start();
+  }
+  
+  public Set<Frame> executeQuery(Query query) throws OntologyException, ProtegeIOException {
     if (query instanceof PhoneticQuery) {
       return executeQuery((PhoneticQuery) query);
     }
@@ -65,7 +90,11 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
       return executeQuery((OrQuery) query);
     }
     else {
-      return delegate.executeQuery(query);
+      SynchronizeQueryCallback qc = new SynchronizeQueryCallback(kbLock);
+      synchronized (kbLock) {
+        delegate.executeQuery(query, qc);
+      }
+      return qc.waitForResults();
     }
   }
   
