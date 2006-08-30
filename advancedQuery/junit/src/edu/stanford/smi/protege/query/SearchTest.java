@@ -50,7 +50,7 @@ public class SearchTest extends TestCase {
   
   public static void checkSearch(OWLModel om, Query query, String frameName, boolean succeed) {
     boolean found = false;
-    for (Frame frame : om.getHeadFrameStore().executeQuery(query)) {
+    for (Frame frame : om.executeQuery(query)) {
       assertTrue(frame.getName().equals(frameName));
       found = true;
     }
@@ -146,7 +146,7 @@ public class SearchTest extends TestCase {
     Query q2 = new PhoneticQuery(label, "BaseEspzza");
     queries.add(q2);
     Query q = new OrQuery(queries);
-    Set<Frame> frames = om.getHeadFrameStore().executeQuery(q);
+    Set<Frame> frames = om.executeQuery(q);
     assertEquals(2, frames.size());
     Frame deepBase = om.getOWLNamedClass("DeepPanBase");
     assertTrue(frames.contains(deepBase));
@@ -158,7 +158,7 @@ public class SearchTest extends TestCase {
     queries.add(q1);
     queries.add(q3);
     q = new OrQuery(queries);
-    frames = om.getHeadFrameStore().executeQuery(q);
+    frames = om.executeQuery(q);
     assertEquals(1, frames.size());
     assertTrue(frames.contains(cheesey));
     
@@ -166,7 +166,7 @@ public class SearchTest extends TestCase {
     queries.add(q3);
     queries.add(q1);
     q = new OrQuery(queries);
-    frames = om.getHeadFrameStore().executeQuery(q);
+    frames = om.executeQuery(q);
     assertEquals(1, frames.size());
     assertTrue(frames.contains(cheesey));
   }
@@ -188,7 +188,7 @@ public class SearchTest extends TestCase {
     queries.add(q2);
     Query q = new AndQuery(queries);
     OWLClass cheesey = om.getOWLNamedClass("CheeseyPizza");
-    Set<Frame> frames = om.getHeadFrameStore().executeQuery(q);
+    Set<Frame> frames = om.executeQuery(q);
     assertEquals(1, frames.size());
     assertTrue(frames.contains(cheesey));
   }
