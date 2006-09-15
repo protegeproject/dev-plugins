@@ -1,5 +1,6 @@
 package edu.stanford.smi.protege.query;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.HashSet;
@@ -27,6 +28,7 @@ import edu.stanford.smi.protege.query.querytypes.OWLRestrictionQuery;
 import edu.stanford.smi.protege.query.querytypes.OrQuery;
 import edu.stanford.smi.protege.query.querytypes.OwnSlotValueQuery;
 import edu.stanford.smi.protege.query.querytypes.PhoneticQuery;
+import edu.stanford.smi.protege.util.ApplicationProperties;
 import edu.stanford.smi.protege.util.Log;
 import edu.stanford.smi.protege.util.transaction.TransactionMonitor;
 
@@ -44,11 +46,19 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
    * Query Narrow Frame Store support methods.
    */
   
-  public QueryNarrowFrameStore(NarrowFrameStore delegate, Set<Slot> searchableSlots, Object kbLock) {
+  public QueryNarrowFrameStore(String name, NarrowFrameStore delegate, Set<Slot> searchableSlots, Object kbLock) {
+    if (log.isLoggable(Level.FINE)) {
+      log.fine("Constructing QueryNarrowFrameStore");
+    }
     this.delegate = delegate;
-    indexer = new PhoneticIndexer(searchableSlots, delegate, kbLock);
-    indexer.indexOntologies();
+    String path = ApplicationProperties.getApplicationDirectory().getAbsolutePath()
+                    + File.separator + "lucene" + File.separator  + name;
+    indexer = new PhoneticIndexer(searchableSlots, delegate, path, kbLock);
     this.kbLock = kbLock;
+  }
+  
+  public void indexOntologies() {
+    indexer.indexOntologies();
   }
   
 
