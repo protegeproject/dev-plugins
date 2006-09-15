@@ -35,6 +35,7 @@ public class SearchTest extends TestCase {
     checkErrors(errors);
     OWLModel om = (OWLModel) project.getKnowledgeBase();
     new InstallNarrowFrameStore(om).execute();
+    new IndexOntologies(om).execute();
     return om;
   }
   
