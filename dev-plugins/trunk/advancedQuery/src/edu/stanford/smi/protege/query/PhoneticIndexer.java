@@ -44,7 +44,7 @@ public class PhoneticIndexer  {
   
   private Object kbLock;
   
-  private String indexPath = ApplicationProperties.getApplicationDirectory().getAbsolutePath() + "/lucene";
+  private String indexPath;
   
   private Analyzer analyzer = new PhoneticAnalyzer(new DoubleMetaphone(200));
   private NarrowFrameStore delegate;
@@ -58,10 +58,11 @@ public class PhoneticIndexer  {
   private static final String SLOT_PROJECT_FIELD        = "slotProject";
   private static final String CONTENTS_FIELD            = "contents";
   
-  public PhoneticIndexer(Set<Slot> searchableSlots, NarrowFrameStore delegate, Object kbLock) {
+  public PhoneticIndexer(Set<Slot> searchableSlots, NarrowFrameStore delegate, String path, Object kbLock) {
     this.searchableSlots = searchableSlots;
     this.delegate = delegate;
     this.kbLock = kbLock;
+    this.indexPath  = path;
   }
 
   public IndexWriter openWriter(boolean create) throws IOException {
