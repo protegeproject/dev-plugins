@@ -45,7 +45,7 @@ public class PhoneticIndexer  {
   
   private String indexPath;
   
-  private Analyzer analyzer = new PhoneticAnalyzer(new DoubleMetaphone(200));
+  private Analyzer analyzer = new PhoneticAnalyzer(new DoubleMetaphone());
   private NarrowFrameStore delegate;
   private Status status = Status.INDEXING;
   
