@@ -1,6 +1,5 @@
 package edu.stanford.smi.protege.query;
 
-import java.io.Serializable;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
