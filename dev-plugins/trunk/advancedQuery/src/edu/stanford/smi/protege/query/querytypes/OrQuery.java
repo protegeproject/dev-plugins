@@ -1,11 +1,12 @@
 package edu.stanford.smi.protege.query.querytypes;
 
+import java.io.Serializable;
 import java.util.Collection;
 
 import edu.stanford.smi.protege.model.KnowledgeBase;
 import edu.stanford.smi.protege.model.query.Query;
 
-public class OrQuery implements Query {
+public class OrQuery implements Query, Serializable {
   
   Collection<Query> disjuncts;
 

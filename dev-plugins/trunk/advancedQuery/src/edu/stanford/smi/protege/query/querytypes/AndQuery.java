@@ -1,11 +1,12 @@
 package edu.stanford.smi.protege.query.querytypes;
 
+import java.io.Serializable;
 import java.util.Collection;
 
 import edu.stanford.smi.protege.model.KnowledgeBase;
 import edu.stanford.smi.protege.model.query.Query;
 
-public class AndQuery implements Query {
+public class AndQuery implements Query, Serializable {
   public Collection<Query> conjuncts;
   
   
