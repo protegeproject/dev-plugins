@@ -60,15 +60,14 @@
    </target>
 
    <target name = "junit-install" depends = "junit-compile,dist">
-     <property file="junit.properties"/>
-     <unzip src = "${plugins}/${pluginName}.zip"
-            dest = "${junit.protege.dir}/plugins"
-            overwrite="yes"/>
+     <echo message="Remember to include the owl plugin directory in plugins"/>
    </target>
 
    <target name = "junit" 
            description = "run the tests (anybody can do it)"
            depends = "dist,junit-install">
+     <unzip src="./lib/protege-owl.zip"
+            dest="${plugins}"/>
      <junit haltonfailure = "on" 
             printsummary="withOutAndErr"
             dir = ".." fork = "yes">
@@ -78,11 +77,10 @@
            <pathelement location = "./lib/lucene-core-2.0.1-dev.jar"/>
            <pathelement location = "./lib/phonetix-0.2.jar"/>
            <fileset
-              dir="${junit.protege.dir}/plugins/edu.stanford.smi.protegex.owl">
+              dir="${plugins}/edu.stanford.smi.protegex.owl">
               <include name = "**/*.jar"/>
            </fileset>
         </classpath>
-        <jvmarg value="-Dprotege.dir=${junit.protege.dir}"/>
         <batchtest>
            <fileset dir="${junit}/src">
              <include name = "**/*Test.java"/>
@@ -94,6 +92,8 @@
    <target name = "clean">
      <delete dir = "${plugins}"/>
      <delete dir = "${classes}"/>
+     <delete dir = "../lucene"/>
+     <delete dir = "../logs"/>
    </target>
 
 </project>
