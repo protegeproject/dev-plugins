@@ -17,6 +17,7 @@ import edu.stanford.smi.protege.model.Cls;
 import edu.stanford.smi.protege.model.Facet;
 import edu.stanford.smi.protege.model.Frame;
 import edu.stanford.smi.protege.model.FrameID;
+import edu.stanford.smi.protege.model.KnowledgeBase;
 import edu.stanford.smi.protege.model.Reference;
 import edu.stanford.smi.protege.model.Slot;
 import edu.stanford.smi.protege.model.framestore.NarrowFrameStore;
@@ -31,6 +32,7 @@ import edu.stanford.smi.protege.query.querytypes.PhoneticQuery;
 import edu.stanford.smi.protege.util.ApplicationProperties;
 import edu.stanford.smi.protege.util.Log;
 import edu.stanford.smi.protege.util.transaction.TransactionMonitor;
+import edu.stanford.smi.protegex.owl.model.OWLModel;
 
 public class QueryNarrowFrameStore implements NarrowFrameStore {
   private static transient Logger log = Log.getLogger(QueryNarrowFrameStore.class);
@@ -40,25 +42,39 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
   private NarrowFrameStore delegate;
   private String name;
 
-  private PhoneticIndexer indexer;
+  private boolean useStdLucene  = false;
+  private StdIndexer      stdIndexer;
+  private PhoneticIndexer phoneticIndexer;
   
   /*-----------------------------------------------------------
    * Query Narrow Frame Store support methods.
    */
   
-  public QueryNarrowFrameStore(String name, NarrowFrameStore delegate, Set<Slot> searchableSlots, Object kbLock) {
+  public QueryNarrowFrameStore(String name, NarrowFrameStore delegate, Set<Slot> searchableSlots, KnowledgeBase kb) {
     if (log.isLoggable(Level.FINE)) {
       log.fine("Constructing QueryNarrowFrameStore");
     }
     this.delegate = delegate;
     String path = ApplicationProperties.getApplicationDirectory().getAbsolutePath()
                     + File.separator + "lucene" + File.separator  + name;
-    indexer = new PhoneticIndexer(searchableSlots, delegate, path, kbLock);
-    this.kbLock = kbLock;
+    phoneticIndexer = new PhoneticIndexer(searchableSlots, delegate, path + File.separator + "phonetic", kb);
+    if (useStdLucene) {
+      stdIndexer = new StdIndexer(searchableSlots, delegate,      path + File.separator + "standard", kb);
+    }
+    if (kb instanceof OWLModel) {
+      phoneticIndexer.setOWLMode(true);
+      if (useStdLucene) {
+        stdIndexer.setOWLMode(true);
+      }
+    }
+    this.kbLock = kb;
   }
   
   public void indexOntologies() {
-    indexer.indexOntologies();
+    phoneticIndexer.indexOntologies();
+    if (useStdLucene) {
+      stdIndexer.indexOntologies();
+    }
   }
   
 
@@ -108,12 +124,12 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
     }
   }
   
-  public Set<Frame> executeQuery(PhoneticQuery query) {
+  public Set<Frame> executeQuery(PhoneticQuery query) throws ProtegeIOException {
     try {
-      return indexer.executeQuery(query);
+      return phoneticIndexer.executeQuery(query);
     } catch (IOException ioe) {
       Log.getLogger().log(Level.WARNING, "Search failed", ioe);
-      return null;
+      throw new ProtegeIOException(ioe);
     } 
   }
   
@@ -129,8 +145,17 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
     return results;
   }
   
-  public Set<Frame> executeQuery(OwnSlotValueQuery query) {
-    return delegate.getMatchingFrames(query.getSlot(), null, false, query.getExpr(), -1);
+  public Set<Frame> executeQuery(OwnSlotValueQuery query) throws ProtegeIOException {
+    if  (useStdLucene) {
+      try {
+        return stdIndexer.executeQuery(query);
+      } catch (IOException ioe) {
+        Log.getLogger().log(Level.WARNING, "Search failed", ioe);
+        throw new ProtegeIOException(ioe);
+      } 
+    } else {
+      return delegate.getMatchingFrames(query.getSlot(), null, false, query.getExpr(), -1);
+    }
   }
   
   public Set<Frame> executeQuery(AndQuery query) {
@@ -222,7 +247,10 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
     }
     delegate.addValues(frame, slot, facet, isTemplate, values);
     if (facet == null && !isTemplate) {
-      indexer.addValues(frame, slot, values);
+      phoneticIndexer.addValues(frame, slot, values);
+      if (useStdLucene) {
+        stdIndexer.addValues(frame, slot, values);
+      }
     }
   }
 
@@ -238,7 +266,10 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
     }
     delegate.removeValue(frame, slot, facet, isTemplate, value);
     if (facet == null && !isTemplate) {
-      indexer.removeValue(frame, slot, value);
+      phoneticIndexer.removeValue(frame, slot, value);
+      if (useStdLucene) {
+        stdIndexer.removeValue(frame, slot, value);
+      }
     }
   }
 
@@ -249,8 +280,12 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
     }
     delegate.setValues(frame, slot, facet, isTemplate, values);
     if (facet == null && !isTemplate) {
-      indexer.removeValues(frame, slot);
-      indexer.addValues(frame, slot, values);
+      phoneticIndexer.removeValues(frame, slot);
+      phoneticIndexer.addValues(frame, slot, values);
+      if (useStdLucene) {
+        stdIndexer.removeValues(frame, slot);
+        stdIndexer.addValues(frame, slot, values);
+      }
     }
   }
 
@@ -283,7 +318,10 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
       log.fine("deleteFrame ");
     }
     delegate.deleteFrame(frame);
-    indexer.removeValues(frame);
+    phoneticIndexer.removeValues(frame);
+    if (useStdLucene) {
+      stdIndexer.removeValues(frame);
+    }
   }
 
   public void close() {
