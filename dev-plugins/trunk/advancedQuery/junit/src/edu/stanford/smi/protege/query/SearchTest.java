@@ -67,44 +67,7 @@ public class SearchTest extends TestCase {
    * Tests
    */
   
-  public static void testOrQuery() {
-    if (log.isLoggable(Level.FINE)) {
-      log.fine("testOrQuery");
-    }
-    OWLModel om = getOWLModel();
-    RDFProperty comment = om.getRDFProperty("rdfs:comment");
-    RDFProperty label   = om.getRDFProperty("rdfs:label");
-    List<Query> queries = new ArrayList<Query>();
-    Query q1 = new OwnSlotValueQuery(comment, "*at least 1 cheese*");
-    queries.add(q1);
-    Query q2 = new PhoneticQuery(label, "BaseEspzza");
-    queries.add(q2);
-    Query q = new OrQuery(queries);
-    Set<Frame> frames = om.executeQuery(q);
-    assertEquals(2, frames.size());
-    Frame deepBase = om.getOWLNamedClass("DeepPanBase");
-    assertTrue(frames.contains(deepBase));
-    Frame cheesey = om.getOWLNamedClass("CheeseyPizza");
-    assertTrue(frames.contains(cheesey));
-
-    queries = new ArrayList<Query>();
-    Query q3 = new PhoneticQuery(label, "BaseEsprzza");
-    queries.add(q1);
-    queries.add(q3);
-    q = new OrQuery(queries);
-    frames = om.executeQuery(q);
-    assertEquals(2, frames.size());
-    assertTrue(frames.contains(cheesey));
-    
-    queries = new ArrayList<Query>();
-    queries.add(q3);
-    queries.add(q1);
-    q = new OrQuery(queries);
-    frames = om.executeQuery(q);
-    assertEquals(2, frames.size());
-    assertTrue(frames.contains(cheesey));
-  }
-
+  
   public static void testBasicSearch() {
     if (log.isLoggable(Level.FINE)) {
       log.fine("basic search test");
@@ -194,4 +157,44 @@ public class SearchTest extends TestCase {
     assertEquals(1, frames.size());
     assertTrue(frames.contains(cheesey));
   }
+  
+  public static void testOrQuery() {
+    if (log.isLoggable(Level.FINE)) {
+      log.fine("testOrQuery");
+    }
+    OWLModel om = getOWLModel();
+    RDFProperty comment = om.getRDFProperty("rdfs:comment");
+    RDFProperty label   = om.getRDFProperty("rdfs:label");
+    List<Query> queries = new ArrayList<Query>();
+    Query q1 = new OwnSlotValueQuery(comment, "*at least 1 cheese*");
+    queries.add(q1);
+    Query q2 = new PhoneticQuery(label, "BaseEspzza");
+    queries.add(q2);
+    Query q = new OrQuery(queries);
+    Set<Frame> frames = om.executeQuery(q);
+    assertEquals(2, frames.size());
+    Frame deepBase = om.getOWLNamedClass("DeepPanBase");
+    assertTrue(frames.contains(deepBase));
+    Frame cheesey = om.getOWLNamedClass("CheeseyPizza");
+    assertTrue(frames.contains(cheesey));
+
+    queries = new ArrayList<Query>();
+    Query q3 = new PhoneticQuery(label, "BaseEsprzza");
+    queries.add(q1);
+    queries.add(q3);
+    q = new OrQuery(queries);
+    frames = om.executeQuery(q);
+    assertEquals(2, frames.size());
+    assertTrue(frames.contains(cheesey));
+    
+    queries = new ArrayList<Query>();
+    queries.add(q3);
+    queries.add(q1);
+    q = new OrQuery(queries);
+    frames = om.executeQuery(q);
+    assertEquals(2, frames.size());
+    assertTrue(frames.contains(cheesey));
+  }
+
+
 }
