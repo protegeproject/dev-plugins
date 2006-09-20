@@ -49,7 +49,10 @@
 
    <target name = "junit-compile" depends = "compile">    
      <javac srcdir = "${junit}" destdir = "${classes}" debug="on">
-       <classpath refid = "project.classpath"/>    
+       <classpath refid = "project.classpath"/>
+       <classpath>
+         <pathelement location = "${classes}"/>
+       </classpath>       
      </javac>    
    </target>
 
