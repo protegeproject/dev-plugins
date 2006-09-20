@@ -1,5 +1,6 @@
 package edu.stanford.smi.protege.query.querytypes;
 
+import java.io.Serializable;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -15,7 +16,7 @@ import edu.stanford.smi.protegex.owl.model.OWLNames;
 import edu.stanford.smi.protegex.owl.model.OWLProperty;
 import edu.stanford.smi.protegex.owl.model.RDFProperty;
 
-public class OWLRestrictionQuery implements Query {
+public class OWLRestrictionQuery implements Query, Serializable {
   private static boolean owlInitialized = false;
   
   private static RDFProperty equivalentClass;

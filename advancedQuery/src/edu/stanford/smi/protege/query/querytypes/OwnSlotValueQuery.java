@@ -1,11 +1,13 @@
 package edu.stanford.smi.protege.query.querytypes;
 
+import java.io.Serializable;
+
 import edu.stanford.smi.protege.model.KnowledgeBase;
 import edu.stanford.smi.protege.model.Slot;
 import edu.stanford.smi.protege.model.query.Query;
 import edu.stanford.smi.protege.util.LocalizeUtils;
 
-public class OwnSlotValueQuery implements Query {
+public class OwnSlotValueQuery implements Query, Serializable {
   private Slot slot;
   private String expr;
   
