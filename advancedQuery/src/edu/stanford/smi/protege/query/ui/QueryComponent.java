@@ -233,6 +233,10 @@ public class QueryComponent extends JPanel {
 			if (endsWith && !expr.startsWith("*")) {
 				expr = "*" + expr;
 			}
+                          // remove the following when the "~#en " problem is handled.
+                          if (!expr.startsWith("*")) {
+                            expr = "*" + expr;
+                          }
 			//System.out.println("Searching for '" + expr + "'...");
 			q = new OwnSlotValueQuery(slot, expr);
 		}
@@ -261,8 +265,8 @@ public class QueryComponent extends JPanel {
 							  createRemoveAction(selectSlot, "Remove Slot", Icons.getRemoveSlotIcon()));
 		selectSlot.addListener(slotListener);
 
-		pnlQueryComponents = new JPanel(new GridLayout(1, 4, 5, 5));
-		pnlQueryComponents.add(selectCls);
+		pnlQueryComponents = new JPanel(new GridLayout(1, 3, 5, 5));
+		/* pnlQueryComponents.add(selectCls); */
 		pnlQueryComponents.add(selectSlot);
 		pnlQueryComponents.add(new LabeledComponent("", getTypesComboBox(), false));
 		pnlQueryComponents.add(valueComponent);
