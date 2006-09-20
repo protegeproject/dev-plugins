@@ -29,12 +29,13 @@ public class SearchTest extends TestCase {
    * Utility functions
    */
   
+  @SuppressWarnings("unchecked")
   public static OWLModel getOWLModel() {
     List errors = new ArrayList();  
     Project project = new Project("advancedQuery/junit/projects/Pizza.pprj", errors);
     checkErrors(errors);
     OWLModel om = (OWLModel) project.getKnowledgeBase();
-    new InstallNarrowFrameStore(om).execute();
+    Set<Slot> slots = (Set<Slot>) new InstallNarrowFrameStore(om).execute();
     new IndexOntologies(om).execute();
     return om;
   }
