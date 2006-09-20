@@ -25,7 +25,10 @@
    <target name = "compile" depends = "init">    
      <javac srcdir = "${src}" destdir = "${classes}" debug="on">
        <classpath refid = "project.classpath"/>    
-     </javac>    
+     </javac>
+     <copy todir="${classes}">
+       <fileset dir = "${src}" includes = "**/*.gif"/>
+     </copy>
    </target>
 
    <target name = "jar" depends = "compile">
@@ -56,13 +59,16 @@
      </javac>    
    </target>
 
-   <target name = "junit" 
-           description = "run the tests (anybody can do it)"
-           depends = "dist,junit-compile">
+   <target name = "junit-install" depends = "junit-compile,dist">
      <property file="junit.properties"/>
      <unzip src = "${plugins}/${pluginName}.zip"
             dest = "${junit.protege.dir}/plugins"
             overwrite="yes"/>
+   </target>
+
+   <target name = "junit" 
+           description = "run the tests (anybody can do it)"
+           depends = "dist,junit-install">
      <junit haltonfailure = "on" 
             printsummary="withOutAndErr"
             dir = ".." fork = "yes">
