@@ -25,7 +25,7 @@ public class PhoneticIndexer  extends CoreIndexer {
   }
   
   public Set<Frame> executeQuery(PhoneticQuery pq) throws IOException {
-    return executeQuery(pq.getSlot().getFrameID(), pq.getExpr());
+    return executeQuery(pq.getSlot(), pq.getExpr());
   }
  
 }
