@@ -24,7 +24,7 @@ public class StdIndexer extends CoreIndexer {
   }
   
   public Set<Frame> executeQuery(OwnSlotValueQuery query) throws IOException {
-    return executeQuery(query.getSlot().getFrameID(), query.getExpr());
+    return executeQuery(query.getSlot(), query.getExpr());
   }
 
 }
