@@ -26,9 +26,9 @@ import org.apache.lucene.search.TermQuery;
 
 import edu.stanford.smi.protege.model.Frame;
 import edu.stanford.smi.protege.model.FrameID;
+import edu.stanford.smi.protege.model.Model;
 import edu.stanford.smi.protege.model.Slot;
 import edu.stanford.smi.protege.model.framestore.NarrowFrameStore;
-import edu.stanford.smi.protege.query.querytypes.PhoneticQuery;
 import edu.stanford.smi.protege.util.Log;
 
 public abstract class CoreIndexer {
@@ -50,10 +50,10 @@ public abstract class CoreIndexer {
   
   boolean owlMode = false;
   
-  private static final String FRAME_LOCAL_FIELD         = "frameLocal";
-  private static final String FRAME_PROJECT_FIELD       = "frameProject";
-  private static final String SLOT_LOCAL_FIELD          = "slotLocal";
-  private static final String SLOT_PROJECT_FIELD        = "slotProject";
+  private Slot nameSlot;
+  
+  private static final String FRAME_NAME                = "frameName";
+  private static final String SLOT_NAME                 = "slotName";
   private static final String CONTENTS_FIELD            = "contents";
   
   public CoreIndexer(Set<Slot> searchableSlots, NarrowFrameStore delegate, String path, Object kbLock) {
@@ -62,6 +62,7 @@ public abstract class CoreIndexer {
     this.kbLock = kbLock;
     this.indexPath  = path;
     analyzer = createAnalyzer();
+    nameSlot = (Slot) delegate.getFrame(Model.SlotID.NAME);
   }
   
   public void setOWLMode(boolean owlMode) {
@@ -122,35 +123,29 @@ public abstract class CoreIndexer {
       return;
     }
     Document doc = new Document();
-    FrameID fid = frame.getFrameID();
-    doc.add(new Field(FRAME_LOCAL_FIELD, "" + fid.getLocalPart(), 
+    doc.add(new Field(FRAME_NAME, getFrameName(frame), 
                       Field.Store.YES, Field.Index.UN_TOKENIZED));
-    doc.add(new Field(FRAME_PROJECT_FIELD, "" + fid.getMemoryProjectPart(), 
-                      Field.Store.YES, Field.Index.UN_TOKENIZED));
-    doc.add(new Field(SLOT_LOCAL_FIELD, "" + slot.getFrameID().getLocalPart(),
-                      Field.Store.YES, Field.Index.UN_TOKENIZED));
-    doc.add(new Field(SLOT_PROJECT_FIELD, "" + slot.getFrameID().getMemoryProjectPart(),
+    doc.add(new Field(SLOT_NAME, getFrameName(slot),
                       Field.Store.YES, Field.Index.UN_TOKENIZED));
     doc.add(new Field(CONTENTS_FIELD, value, Field.Store.YES, Field.Index.TOKENIZED));
     writer.addDocument(doc);
   }
 
-  public Set<Frame> executeQuery(FrameID slotId, String expr) throws IOException {
+  public Set<Frame> executeQuery(Slot slot, String expr) throws IOException {
     if (status == Status.DOWN) {
       return null;
     }
     Searcher searcher = null;
     Set<Frame> results = new HashSet<Frame>();
     try {
-      Query luceneQuery = generateLuceneQuery(slotId, expr);
+      Query luceneQuery = generateLuceneQuery(slot, expr);
       searcher = new IndexSearcher(getIndexPath());
       Hits hits = searcher.search(luceneQuery);
       for (int i = 0; i < hits.length(); i++) {
         Document doc = hits.doc(i);
-        int frameLocal = Integer.parseInt(doc.get(FRAME_LOCAL_FIELD));
-        int frameProject = Integer.parseInt(doc.get(FRAME_PROJECT_FIELD));
+        String frameName = doc.get(FRAME_NAME);
         synchronized (kbLock) {
-          results.add(delegate.getFrame(FrameID.createLocal(frameProject, frameLocal)));
+          results.add(getFrameByName(frameName));
         }
       }
     } finally {
@@ -159,9 +154,7 @@ public abstract class CoreIndexer {
     return results;
   }
   
-  protected Query generateLuceneQuery(FrameID slotId, String expr) throws IOException {
-    String slotLocal   = "" + slotId.getLocalPart();
-    String slotProject = "" + slotId.getMemoryProjectPart();
+  protected Query generateLuceneQuery(Slot slot, String expr) throws IOException {
     String contents    = "" + expr;
     BooleanQuery query = new  BooleanQuery();
     
@@ -171,9 +164,7 @@ public abstract class CoreIndexer {
       Term term = new Term(CONTENTS_FIELD, tok.termText());
       query.add(new TermQuery(term), BooleanClause.Occur.MUST);
     }
-    Term term = new Term(SLOT_LOCAL_FIELD, slotLocal);
-    query.add(new TermQuery(term), BooleanClause.Occur.MUST);
-    term = new Term(SLOT_PROJECT_FIELD, slotProject);
+    Term term = new Term(SLOT_NAME, getFrameName(slot));
     query.add(new TermQuery(term), BooleanClause.Occur.MUST);
     return query;
   }
@@ -184,9 +175,7 @@ public abstract class CoreIndexer {
     BooleanQuery query  = new  BooleanQuery();
     
     Term term;
-    term = new Term(FRAME_LOCAL_FIELD, frameLocal);
-    query.add(new TermQuery(term), BooleanClause.Occur.MUST);
-    term = new Term(FRAME_PROJECT_FIELD, frameProject);
+    term = new Term(FRAME_NAME, getFrameName(frame));
     query.add(new TermQuery(term), BooleanClause.Occur.MUST);
     
     return query;
@@ -200,13 +189,9 @@ public abstract class CoreIndexer {
     BooleanQuery query  = new  BooleanQuery();
     
     Term term;
-    term = new Term(FRAME_LOCAL_FIELD, frameLocal);
+    term = new Term(FRAME_NAME, getFrameName(frame));
     query.add(new TermQuery(term), BooleanClause.Occur.MUST);
-    term = new Term(FRAME_PROJECT_FIELD, frameProject);
-    query.add(new TermQuery(term), BooleanClause.Occur.MUST);
-    term = new Term(SLOT_LOCAL_FIELD, slotLocal);
-    query.add(new TermQuery(term), BooleanClause.Occur.MUST);
-    term = new Term(SLOT_PROJECT_FIELD, slotProject);
+    term = new Term(SLOT_NAME, getFrameName(slot));
     query.add(new TermQuery(term), BooleanClause.Occur.MUST);
     return query;
   }
@@ -234,6 +219,16 @@ public abstract class CoreIndexer {
     } catch (IOException ioe) {
       Log.getLogger().log(Level.WARNING, "Exception caught closing files involved in lucene indicies", ioe);
     }
+  }
+  
+  private String getFrameName(Frame frame) {
+    Collection values = delegate.getValues(frame, nameSlot, null, false);
+    return (String) values.iterator().next();
+  }
+  
+  private Frame getFrameByName(String name) {
+    Set<Frame> frames = delegate.getFrames(nameSlot, null, false, name);
+    return frames.iterator().next();
   }
   
   
