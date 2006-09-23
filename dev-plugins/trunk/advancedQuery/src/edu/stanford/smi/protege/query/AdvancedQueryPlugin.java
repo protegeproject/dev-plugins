@@ -78,21 +78,20 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 	}
 	
 	public void initialize() {
-		this.kb = getKnowledgeBase();
-		InstallNarrowFrameStore frameStore = new InstallNarrowFrameStore(kb);
-		this.slots = frameStore.getSearchableSlots();
-		this.canIndex = RemoteClientFrameStore.isOperationAllowed(kb, INDEX_OPERATION);
-		frameStore.execute();
-
-		// initialize UI 
-		setLabel("Advanced Query Tab");
-		setIcon(Icons.getAddQueryLibraryIcon());
-        setLayout(new BorderLayout());
-        
-        // add UI components
-		createGUI();
-		// add the default first query component
-		addQueryComponent();
+	  this.kb = getKnowledgeBase();
+	  InstallNarrowFrameStore frameStore = new InstallNarrowFrameStore(kb);
+	  this.canIndex = RemoteClientFrameStore.isOperationAllowed(kb, INDEX_OPERATION);
+           this.slots = (Set) frameStore.execute();
+	  
+	  // initialize UI 
+	  setLabel("Advanced Query Tab");
+	  setIcon(Icons.getAddQueryLibraryIcon());
+	  setLayout(new BorderLayout());
+	  
+	  // add UI components
+	  createGUI();
+	  // add the default first query component
+	  addQueryComponent();
 	}
 	
 	private void createGUI() {
