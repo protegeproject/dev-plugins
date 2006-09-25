@@ -28,6 +28,7 @@ import edu.stanford.smi.protege.model.KnowledgeBase;
 import edu.stanford.smi.protege.model.Slot;
 import edu.stanford.smi.protege.model.ValueType;
 import edu.stanford.smi.protege.model.query.Query;
+import edu.stanford.smi.protege.query.InvalidQueryException;
 import edu.stanford.smi.protege.query.querytypes.AndQuery;
 import edu.stanford.smi.protege.query.querytypes.OrQuery;
 import edu.stanford.smi.protege.query.querytypes.OwnSlotValueQuery;
@@ -110,29 +111,43 @@ public class QueryComponent extends JPanel {
 	protected KnowledgeBase getKnowledgeBase() {
 		return kb;
 	}
-		
-	public final Query getQuery() {
+	
+	/**
+	 * Gets the query for this component.  If the query is invalid an exception is thrown.
+	 * @return Query 
+	 * @throws InvalidQueryException if the query is invalid - missing a slot of expression value
+	 */
+	public final Query getQuery() throws InvalidQueryException {
 		Slot slot = (Slot) selectSlot.getObject();
 		if (slot == null) {
 			JOptionPane.showMessageDialog(this, "Please choose a slot", "Choose a slot", JOptionPane.ERROR_MESSAGE);
 			selectSlot.focus();
-			return null;
+			throw new InvalidQueryException("A slot value is required");
 		}
 
 		return getQueryForType(slot, slot.getValueType());
 	}
 	
-	protected Query getQueryForType(Slot slot, ValueType type) {
+	protected Query getQueryForType(Slot slot, ValueType type) throws InvalidQueryException {
 		Query q = null;
+		String expr = getExpression();
+		if ((expr == null) || (expr.length() == 0)) {
+			JOptionPane.showMessageDialog(this, "Please enter an expression", "Enter an expression", JOptionPane.ERROR_MESSAGE);
+			if (valueComponent != null) {
+				valueComponent.focus();
+			}
+			throw new InvalidQueryException("An expression is required");
+		}
+		
 		if (ValueType.ANY.equals(type) || ValueType.STRING.equals(type)) {
-			q = getStringQuery(slot);
+			q = getStringQuery(slot, expr);
 		} else if (ValueType.BOOLEAN.equals(type) || ValueType.SYMBOL.equals(type) ||
 				   ValueType.INTEGER.equals(type) || ValueType.FLOAT.equals(type)) {
 			// TODO this doesn't work
-			q = new OwnSlotValueQuery(slot, getExpression());
+			q = new OwnSlotValueQuery(slot, expr);
 		} else if (ValueType.CLS.equals(type) || ValueType.INSTANCE.equals(type)) {
 			// TODO what should go here?
-			q = new OwnSlotValueQuery(slot, getExpression());
+			q = new OwnSlotValueQuery(slot, expr);
 		}
 		return q;
 	}
@@ -148,19 +163,10 @@ public class QueryComponent extends JPanel {
 		return expr;
 	}
 	
-	private Query getStringQuery(Slot slot) {
+	private Query getStringQuery(Slot slot, String expr) throws InvalidQueryException {
 		Query q;
 		String type = (String) getTypesComboBox().getSelectedItem();
-		String expr = getExpression();
 		
-		if (expr.length() == 0) {
-			JOptionPane.showMessageDialog(this, "Please enter an expression", "Enter an expression", JOptionPane.ERROR_MESSAGE);
-			if (valueComponent != null) {
-				valueComponent.focus();
-			}
-			return null;
-		}
-
 		if (SOUNDS_LIKE.equals(type)) {
 			q = new PhoneticQuery(slot, getExpression());
 		} else {
@@ -438,8 +444,12 @@ public class QueryComponent extends JPanel {
     	final Query[] queryHolder = { null };
     	CloseCallback callback = new CloseCallback() {
     		public boolean canClose(int result) {
-    			queryHolder[0] = comp.getQuery();
-    			return (queryHolder[0] != null);
+    			try {
+					queryHolder[0] = comp.getQuery();
+				} catch (InvalidQueryException e) {
+					return false;
+				}
+    			return true;
     		}
     	};
     	

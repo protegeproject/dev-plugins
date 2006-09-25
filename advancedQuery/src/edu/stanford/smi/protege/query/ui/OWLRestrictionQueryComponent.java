@@ -19,6 +19,7 @@ import javax.swing.JScrollPane;
 import edu.stanford.smi.protege.model.Slot;
 import edu.stanford.smi.protege.model.ValueType;
 import edu.stanford.smi.protege.model.query.Query;
+import edu.stanford.smi.protege.query.InvalidQueryException;
 import edu.stanford.smi.protege.query.querytypes.AndQuery;
 import edu.stanford.smi.protege.query.querytypes.OWLRestrictionQuery;
 import edu.stanford.smi.protege.query.querytypes.OrQuery;
@@ -78,9 +79,12 @@ public class OWLRestrictionQueryComponent extends QueryComponent {
 	}
 
 	@Override
-	protected Query getQueryForType(Slot slot, ValueType type) {
+	protected Query getQueryForType(Slot slot, ValueType type) throws InvalidQueryException {
 		Query query = QueryUtil.getQueryFromListPanel(groupListPanel, btnAndQuery.isSelected());
-		return new OWLRestrictionQuery(getOWLModel(), (OWLProperty)slot, query);
+		if (query != null) {
+			return new OWLRestrictionQuery(getOWLModel(), (OWLProperty) slot, query);
+		}
+		return null;
 	}
 	
 	@Override
