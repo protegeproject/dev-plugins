@@ -86,6 +86,9 @@ public class QueryListComponent extends QueryLabeledComponent {
 	
 	public void focus() {
 		lst.requestFocus();
+		if (lst.getModel().getSize() >= 1) {
+			lst.setSelectedIndex(0);
+		}
 	}
 	
 	protected void viewObject() {

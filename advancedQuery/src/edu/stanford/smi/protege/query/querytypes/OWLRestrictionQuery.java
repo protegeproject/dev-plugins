@@ -156,4 +156,10 @@ public class OWLRestrictionQuery implements Query, Serializable {
     query.localize(kb);
   }
 
+
+  @Override
+  public String toString() {
+	return "OWLRestrictionQuery: property=" + (property != null ? property.getBrowserText() : "null") + ", query=[ " + query.toString() + " ]";
+  }
+  
 }

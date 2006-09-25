@@ -27,5 +27,10 @@ public class OwnSlotValueQuery implements Query, Serializable {
   public void localize(KnowledgeBase kb) {
     LocalizeUtils.localize(slot, kb);
   }
+  
+  @Override
+  public String toString() {
+	return "OwnSlotValueQuery: slot=" + (slot != null ? slot.getBrowserText() : "null") + ", expression=" + expr;
+  }
 
 }

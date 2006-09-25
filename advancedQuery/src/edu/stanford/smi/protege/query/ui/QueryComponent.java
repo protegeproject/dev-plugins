@@ -1,6 +1,8 @@
 package edu.stanford.smi.protege.query.ui;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
@@ -26,12 +28,17 @@ import edu.stanford.smi.protege.model.KnowledgeBase;
 import edu.stanford.smi.protege.model.Slot;
 import edu.stanford.smi.protege.model.ValueType;
 import edu.stanford.smi.protege.model.query.Query;
+import edu.stanford.smi.protege.query.querytypes.AndQuery;
+import edu.stanford.smi.protege.query.querytypes.OrQuery;
 import edu.stanford.smi.protege.query.querytypes.OwnSlotValueQuery;
 import edu.stanford.smi.protege.query.querytypes.PhoneticQuery;
 import edu.stanford.smi.protege.resource.Icons;
 import edu.stanford.smi.protege.ui.DisplayUtilities;
+import edu.stanford.smi.protege.util.Assert;
 import edu.stanford.smi.protege.util.JNumberTextField;
 import edu.stanford.smi.protege.util.LabeledComponent;
+import edu.stanford.smi.protege.util.ModalDialog;
+import edu.stanford.smi.protege.util.ModalDialog.CloseCallback;
 
 /**
  * Holds the query items - the selected {@link Cls}, {@link Slot}, type, and expression.
@@ -58,95 +65,139 @@ public class QueryComponent extends JPanel {
 	private KnowledgeBase kb;
 	private Collection<Slot> slots;
 	private Collection<Slot> allSlots;
+
+	private static final QueryLabeledComponent NULL_COMPONENT = getBlankComponent();
 	
-	private QueryListComponent selectCls;
-	private QueryListComponent selectSlot;
-	private JComboBox cmbTypes;
-	private DefaultComboBoxModel cmbModelTypes;
+	protected QueryListComponent selectCls = null;
+	protected QueryListComponent selectSlot = null;
+	protected LabeledComponent typesComponent = null;
+	private QueryLabeledComponent valueComponent = NULL_COMPONENT;
+
+	private JComboBox cmbTypes = null;
+	private DefaultComboBoxModel cmbModelTypes = null;
 	private final DefaultComboBoxModel cmbModelBoolean = new DefaultComboBoxModel(new String[] { TRUE, FALSE });
 	private DefaultComboBoxModel cmbModelSymbol = new DefaultComboBoxModel(NULL);
-	private static final QueryLabeledComponent NULL_COMPONENT = new QueryLabeledComponent("", new JLabel(""));
-	private QueryLabeledComponent valueComponent = NULL_COMPONENT;
 	private JPanel pnlQueryComponents;
 	private ValueType currentValueType = null;
+	protected final Slot defaultSlot;
 	
-	/** Listens for when the user selects a Cls and updates the slots accordingly. */
-	private QueryListComponentListener clsListener = new QueryListComponentListener() {
-		public void valueChanged(Object value) {
-			if (value == null) {
-				slots = allSlots;
-			} else if (value instanceof Cls) {
-				Cls cls = (Cls) value;
-				slots = cls.getTemplateSlots();
-				// use the default slot if one exists
-				BrowserSlotPattern pattern = cls.getDirectBrowserSlotPattern();
-				if (pattern != null) {
-					selectSlot.setObject(pattern.getFirstSlot());
-				} else {
-					// check if the current slot is valid and reset if not
-					Slot slot = (Slot) selectSlot.getObject();
-					if ((slot != null) && !slots.contains(slot)) {
-						selectSlot.setObject(kb.getNameSlot());
-					}
-				}
-			}
-		}
-	};
-	
-	/** Listens for when a slot is selected and updates the types combobox and value component. */
-	private QueryListComponentListener slotListener = new QueryListComponentListener() {
-		public void valueChanged(Object value) {
-			// remove the old value component
-			pnlQueryComponents.remove(valueComponent);
-			if (value == null) {
-				// reset the types and value components
-				cmbModelTypes.removeAllElements();
-				cmbModelTypes.addElement("");
-				valueComponent = NULL_COMPONENT;
-				currentValueType = null;
-			} else if (value instanceof Slot) {
-				Slot slot = (Slot) value;
-				// update the types combobox (if different from current type)
-				ValueType type = slot.getValueType();
-				if (!type.equals(currentValueType)) {
-					currentValueType = type;
-					
-					String[] types = typesMap.get(type);
-					cmbModelTypes.removeAllElements();
-					for (int i = 0; i < types.length; i++) {
-						cmbModelTypes.addElement(types[i]);
-					}
-	
-					// load the symbol values
-					if (ValueType.SYMBOL.equals(type)) {
-						cmbModelSymbol.removeAllElements();
-						for (Iterator iter = slot.getAllowedValues().iterator(); iter.hasNext(); ) {
-							cmbModelSymbol.addElement(iter.next());
-						}
-					}
-	
-					// get the new value component
-					valueComponent = typesToComponentMap.get(type);
-					valueComponent.reset();
-				}
-			}
-			pnlQueryComponents.add(valueComponent);
-			pnlQueryComponents.revalidate();
-			pnlQueryComponents.repaint();
-		}
-	};
-	
+	/**
+	 * Initializes this component with the given {@link KnowledgeBase} and selectable {@link Slot}s.
+	 * The Name Slot (:NAME) is used as the default Slot.
+	 * @param slots the available slots (which the user can choose from)
+	 */
 	public QueryComponent(KnowledgeBase kb, Collection<Slot> slots) {
+		this(kb, slots, kb.getNameSlot());
+	}
+
+	/**
+	 * Initializes this component with the given {@link KnowledgeBase} and selectable {@link Slot}s.
+	 * The defaultSlot is used <b>IF</b> if is contained in the slots collection.
+	 * @param slots the available slots (which the user can choose from)
+	 * @param defaultSlot the slot to display by default 
+	 */
+	public QueryComponent(KnowledgeBase kb, Collection<Slot> slots, Slot defaultSlot) {
 		this.kb = kb;
 		this.slots = slots;
 		this.allSlots = slots;
+		this.defaultSlot = defaultSlot;
 		this.typesMap = new HashMap<ValueType, String[]>(15);
 		this.typesToComponentMap = new HashMap<ValueType, QueryLabeledComponent>(15);
 		
 		initialize();
 	}
 	
-	private void initializeTypesToComponents() {
+	protected KnowledgeBase getKnowledgeBase() {
+		return kb;
+	}
+		
+	public final Query getQuery() {
+		Slot slot = (Slot) selectSlot.getObject();
+		if (slot == null) {
+			JOptionPane.showMessageDialog(this, "Please choose a slot", "Choose a slot", JOptionPane.ERROR_MESSAGE);
+			selectSlot.focus();
+			return null;
+		}
+
+		return getQueryForType(slot, slot.getValueType());
+	}
+	
+	protected Query getQueryForType(Slot slot, ValueType type) {
+		Query q = null;
+		if (ValueType.ANY.equals(type) || ValueType.STRING.equals(type)) {
+			q = getStringQuery(slot);
+		} else if (ValueType.BOOLEAN.equals(type) || ValueType.SYMBOL.equals(type) ||
+				   ValueType.INTEGER.equals(type) || ValueType.FLOAT.equals(type)) {
+			// TODO this doesn't work
+			q = new OwnSlotValueQuery(slot, getExpression());
+		} else if (ValueType.CLS.equals(type) || ValueType.INSTANCE.equals(type)) {
+			// TODO what should go here?
+			q = new OwnSlotValueQuery(slot, getExpression());
+		}
+		return q;
+	}
+
+	private String getExpression() {
+		String expr = "";
+		if (valueComponent != null) {
+			Object obj = valueComponent.getValue();
+			if (obj != null) {
+				expr = obj.toString();
+			}
+		}
+		return expr;
+	}
+	
+	private Query getStringQuery(Slot slot) {
+		Query q;
+		String type = (String) getTypesComboBox().getSelectedItem();
+		String expr = getExpression();
+		
+		if (expr.length() == 0) {
+			JOptionPane.showMessageDialog(this, "Please enter an expression", "Enter an expression", JOptionPane.ERROR_MESSAGE);
+			if (valueComponent != null) {
+				valueComponent.focus();
+			}
+			return null;
+		}
+
+		if (SOUNDS_LIKE.equals(type)) {
+			q = new PhoneticQuery(slot, getExpression());
+		} else {
+			boolean startsWith = STARTS_WITH.equals(type) || CONTAINS.equals(type);
+			boolean endsWith = ENDS_WITH.equals(type) || CONTAINS.equals(type);
+			if (startsWith && !expr.endsWith("*")) {
+				expr = expr + "*";
+			}
+			if (endsWith && !expr.startsWith("*")) {
+				expr = "*" + expr;
+			}
+			//System.out.println("Searching for '" + expr + "'...");
+			q = new OwnSlotValueQuery(slot, expr);
+		}
+		return q;
+	}
+	
+	protected void initialize() {
+		initializeTypes();
+		initializeTypesToComponents();
+		
+		setLayout(new BorderLayout(0, 0));
+		setDimensions();
+		
+		add(getQueryComponentsPanel(), BorderLayout.CENTER);
+
+		// set the default slot (e.g. :NAME)
+		if ((defaultSlot != null) && slots.contains(defaultSlot)) {
+			getSelectSlotComponent().setObject(defaultSlot);
+		}
+	}
+
+	/**
+	 * Creates a map of {@link ValueType} objects to {@link QueryLabeledComponent} values, one of which 
+	 * is shown as the value component to let the user enter a String, number, or to select an Cls or Instance.
+	 */
+	protected void initializeTypesToComponents() {
 		typesToComponentMap.clear();
 		QueryListComponent clsComp = new QueryListComponent("", kb);
 		clsComp.setActions(createViewAction(clsComp, "View Cls", Icons.getViewClsIcon()),
@@ -169,8 +220,11 @@ public class QueryComponent extends JPanel {
 		typesToComponentMap.put(ValueType.SYMBOL, new QueryLabeledComponent("Symbol", new JComboBox(cmbModelSymbol)));
 	}
 
-	private void initializeTypes() {
-		String[] string = { EXACT_MATCH, CONTAINS, STARTS_WITH, ENDS_WITH, SOUNDS_LIKE };	// any, string
+	/**
+	 * Creates a map of {@link ValueType} objects to String[] values used in the types {@link JComboBox}.
+	 */
+	protected void initializeTypes() {
+		String[] string = { CONTAINS, STARTS_WITH, ENDS_WITH, EXACT_MATCH, SOUNDS_LIKE };	// any, string
 		String[] number = { IS, GREATER_THAN, LESS_THAN };	// integer, float
 		String[] contains = { CONTAINS };	// instance, class
 		String[] is = { IS };	// symbol, boolean
@@ -185,106 +239,117 @@ public class QueryComponent extends JPanel {
 		typesMap.put(ValueType.SYMBOL, is);
 	}
 	
-	public Query getQuery() {
-		Slot slot = (Slot) selectSlot.getObject();
-		if (slot == null) {
-			JOptionPane.showMessageDialog(this, "Please choose a slot", "Choose a slot", JOptionPane.ERROR_MESSAGE);
-			selectSlot.focus();
-			return null;
+	/**
+	 * Initializes and returns the query components panel.
+	 */
+	protected JPanel getQueryComponentsPanel() {
+		if (pnlQueryComponents == null) {
+			pnlQueryComponents = new JPanel(new GridLayout(1, /* 4 */ 3, 5, 0));
+			/* pnlQueryComponents.add(getSelectClsComponent()); */
+			pnlQueryComponents.add(getSelectSlotComponent());
+			pnlQueryComponents.add(getTypesComponent());
+			pnlQueryComponents.add(getValueComponent());
 		}
-
-		Query q = null;
-		ValueType type = slot.getValueType();
-		if (ValueType.ANY.equals(type) || ValueType.STRING.equals(type)) {
-			q = getStringQuery(slot);
-		} else if (ValueType.BOOLEAN.equals(type) || ValueType.SYMBOL.equals(type) ||
-				   ValueType.INTEGER.equals(type) || ValueType.FLOAT.equals(type)) {
-			q = new OwnSlotValueQuery(slot, getExpression());
-		} else if (ValueType.CLS.equals(type) || ValueType.INSTANCE.equals(type)) {
-			// TODO what should go here?
-			q = new OwnSlotValueQuery(slot, getExpression());
-		}
-		return q;
-	}
-
-	private String getExpression() {
-		String expr = "";
-		if (valueComponent != null) {
-			Object obj = valueComponent.getValue();
-			if (obj != null) {
-				expr = obj.toString();
-			}
-		}
-		return expr;
+		return pnlQueryComponents;
 	}
 	
-	private Query getStringQuery(Slot slot) {
-		Query q;
-		String type = (String) cmbTypes.getSelectedItem();
-		if (SOUNDS_LIKE.equals(type)) {
-			q = new PhoneticQuery(slot, getExpression());
-		} else {
-			boolean startsWith = STARTS_WITH.equals(type) || CONTAINS.equals(type);
-			boolean endsWith = ENDS_WITH.equals(type) || CONTAINS.equals(type);
-			String expr = getExpression();
-			if (startsWith && !expr.endsWith("*")) {
-				expr = expr + "*";
-			}
-			if (endsWith && !expr.startsWith("*")) {
-				expr = "*" + expr;
-			}
-			//System.out.println("Searching for '" + expr + "'...");
-			q = new OwnSlotValueQuery(slot, expr);
-		}
-		return q;
+	/**
+	 * Gets the current {@link QueryLabeledComponent}.
+	 */
+	protected QueryLabeledComponent getValueComponent() {
+		// initialized to a blank component
+		return valueComponent;
 	}
 	
-	private void initialize() {
-		initializeTypes();
-		initializeTypesToComponents();
-		
-		setLayout(new BorderLayout());
-		setPreferredSize(new Dimension(500, 56));
+	/**
+	 * Initializes and returns the types {@link LabeledComponent}.
+	 */
+	protected Component getTypesComponent() {
+		if (typesComponent == null) {
+			typesComponent = new LabeledComponent("", getTypesComboBox(), false);
+		}
+		return typesComponent;
+	}
+	
+	/**
+	 * Returns a new blank {@link QueryLabeledComponent}.
+	 */
+	protected static final QueryLabeledComponent getBlankComponent() {
+		return new QueryLabeledComponent("", new JLabel(""));
+	}
+	
+	/**
+	 * Creates a new {@link QueryListComponent} which lets the user choose a {@link Cls}.
+	 */
+	protected QueryListComponent getSelectClsComponent() {
+		if (selectCls == null) {
+			selectCls = new QueryListComponent("Class", kb);
+			selectCls.setActions(createViewAction(selectCls, "View Cls", Icons.getViewClsIcon()),
+								 createSelectClsAction(selectCls, "Select Cls", Icons.getAddClsIcon(), true),
+								 createRemoveAction(selectCls, "Remove Cls", Icons.getRemoveClsIcon()));
+			selectCls.addListener(clsListener);
+		}
+		return selectCls;
+	}
+	
+	/**
+	 * Creates a new {@link QueryListComponent} which lets the user choose a {@link Slot}.
+	 */
+	protected QueryListComponent getSelectSlotComponent() {
+		if (selectSlot == null) {
+			selectSlot = new QueryListComponent("Slot", kb);
+			selectSlot.setActions(createViewAction(selectSlot, "View Slot", Icons.getViewSlotIcon()), 
+								  createSelectSlotAction(selectSlot, "Select Slot", Icons.getAddSlotIcon()),
+								  createRemoveAction(selectSlot, "Remove Slot", Icons.getRemoveSlotIcon()));
+			selectSlot.addListener(slotListener);
+		}
+		return selectSlot;
+	}
+	
+	protected void setDimensions() {
+		setMinimumSize(new Dimension(100, 56));
+		//setPreferredSize(new Dimension(500, 56));
 		setMaximumSize(new Dimension(2000, 56));
-		//setBackground(Color.white);
-		
-		// set the display name slot
-		selectCls = new QueryListComponent("Class", kb);
-		selectCls.setActions(createViewAction(selectCls, "View Cls", Icons.getViewClsIcon()),
-							 createSelectClsAction(selectCls, "Select Cls", Icons.getAddClsIcon(), true),
-							 createRemoveAction(selectCls, "Remove Cls", Icons.getRemoveClsIcon()));
-		selectCls.addListener(clsListener);
-
-		selectSlot = new QueryListComponent("Slot", kb);
-		selectSlot.setActions(createViewAction(selectSlot, "View Slot", Icons.getViewSlotIcon()), 
-							  createSelectSlotAction(selectSlot, "Select Slot", Icons.getAddSlotIcon()),
-							  createRemoveAction(selectSlot, "Remove Slot", Icons.getRemoveSlotIcon()));
-		selectSlot.addListener(slotListener);
-
-		pnlQueryComponents = new JPanel(new GridLayout(1, 3, 5, 5));
-		/* pnlQueryComponents.add(selectCls); */
-		pnlQueryComponents.add(selectSlot);
-		pnlQueryComponents.add(new LabeledComponent("", getTypesComboBox(), false));
-		pnlQueryComponents.add(valueComponent);
-		add(pnlQueryComponents, BorderLayout.CENTER);
-
-		// set the default slot (:NAME)
-		selectSlot.setObject(kb.getNameSlot());
+	}
+	
+	@Override
+	public void setBackground(Color bg) {
+		super.setBackground(bg);
+		// pass the bgcolor 
+		if (pnlQueryComponents != null) {
+			if (selectCls != null) {
+				selectCls.setBackground(bg);
+			}
+			if (selectSlot != null) {
+				selectSlot.setBackground(bg);
+			}
+			if (typesComponent != null) {
+				typesComponent.setBackground(bg);
+			}
+			if (valueComponent != null) {
+				valueComponent.setBackground(bg);
+			}
+		}
 	}
 	
 	private JComboBox getTypesComboBox() {
 		if (cmbTypes == null) {
-			cmbModelTypes = new DefaultComboBoxModel();
-			cmbModelTypes.addElement("");
-			cmbTypes = new JComboBox(cmbModelTypes);
+			cmbTypes = new JComboBox(getTypesModel());
 			cmbTypes.setSelectedIndex(0);
 		}
 		return cmbTypes;
 	}
-	   
 	
+	private DefaultComboBoxModel getTypesModel() {
+		if (cmbModelTypes == null) {
+			cmbModelTypes = new DefaultComboBoxModel();
+			cmbModelTypes.addElement("");
+		}
+		return cmbModelTypes;
+	}
+		
 	/** Creates an action used to view a Frame.  Initially disabled. */
-	private Action createViewAction(final QueryListComponent comp, String name, Icon icon) {
+	protected Action createViewAction(final QueryListComponent comp, String name, Icon icon) {
         Action action = new AbstractAction(name, icon) {
             public void actionPerformed(ActionEvent event) {
             	comp.viewObject();
@@ -294,38 +359,47 @@ public class QueryComponent extends JPanel {
         return action;
     }
     
-	private Action createSelectClsAction(final QueryListComponent comp, final String name, Icon icon, final boolean updateSlotComponent) {
+	protected Action createSelectClsAction(final QueryListComponent comp, final String name, Icon icon, final boolean updateSlotComponent) {
 		return new AbstractAction(name, icon) {
 			public void actionPerformed(ActionEvent e) {
 				Cls cls = DisplayUtilities.pickCls(comp, kb, kb.getRootClses(), name);
-				comp.setObject(cls);
+				// if the user pressed cancel then cls will be null
+				if (cls != null) {
+					comp.setObject(cls);
+				}
 			}
 		};
 	}
 	
-	private Action createSelectInstanceAction(final QueryListComponent comp, final String name, Icon icon) {
+	protected Action createSelectInstanceAction(final QueryListComponent comp, final String name, Icon icon) {
 		return new AbstractAction(name, icon) {
 			public void actionPerformed(ActionEvent e) {
 				Slot slot = (Slot) selectSlot.getObject();
 				Collection clses = (slot == null ? kb.getRootClses() : slot.getAllowedClses());
 				Instance inst = DisplayUtilities.pickInstance(comp, clses);
-				comp.setObject(inst);
+				// if the user pressed cancel then inst will be null
+				if (inst != null) {
+					comp.setObject(inst);
+				}
 			}
 		};
 	}	
 	
 	/** Creates an action used to select a value for the QueryListComponent.  Initially enabled. */
-	private Action createSelectSlotAction(final QueryListComponent comp, final String name, Icon icon) {
+	protected Action createSelectSlotAction(final QueryListComponent comp, final String name, Icon icon) {
 		return new AbstractAction(name, icon) {
 			public void actionPerformed(ActionEvent e) {
 				Slot slot = DisplayUtilities.pickSlot(comp, slots, name);
-				comp.setObject(slot);
+				// if the user pressed cancel then slot will be null
+				if (slot != null) {
+					comp.setObject(slot);
+				}
 			}
 		};
 	}	
 	
 	/** Creates an action used to remove a value from the QueryListComponent.  Initially disabled. */
-    private Action createRemoveAction(final QueryListComponent comp, String name, Icon icon) {
+	protected Action createRemoveAction(final QueryListComponent comp, String name, Icon icon) {
         Action action = new AbstractAction(name, icon) {
             public void actionPerformed(ActionEvent event) {
                 comp.clearObject();
@@ -344,5 +418,111 @@ public class QueryComponent extends JPanel {
 		revalidate();
 		repaint();
 	}
+	
+	/**
+	 * Displays a QueryComponent inside a {@link ModalDialog} letting the user create a single query.
+	 * At the moment {@link AndQuery} and {@link OrQuery} are not allowed.
+	 * @param slots	the allowed slots
+	 * @param defaultSlot the slot to display by default (must be contained in the slots Collection)
+	 * @param parent the parent component
+	 * @param title the title for the dialog
+	 * @return the {@link Query} or null
+	 */
+    public static Query showQueryDialog(KnowledgeBase kb, Collection<Slot> slots, Slot defaultSlot, Component parent, String title) {
+    	// This method is not used at the moment
+    	Query query = null;
+    	final QueryComponent comp = new QueryComponent(kb, slots, defaultSlot);
+
+    	// we need to get the query this way because when the dialog closes all the children components
+    	// of QueryComponent are disposed which prevents us from getting the query afterwards
+    	final Query[] queryHolder = { null };
+    	CloseCallback callback = new CloseCallback() {
+    		public boolean canClose(int result) {
+    			queryHolder[0] = comp.getQuery();
+    			return (queryHolder[0] != null);
+    		}
+    	};
+    	
+        int result = ModalDialog.showDialog(parent, comp, title, ModalDialog.MODE_OK_CANCEL, callback);
+        switch (result) {
+            case ModalDialog.OPTION_OK:
+                query = queryHolder[0];
+                break;
+            case ModalDialog.OPTION_CANCEL:
+                break;
+            default:
+                Assert.fail("bad result: " + result);
+                break;
+        }
+        return query;
+    }
     
+	/** Listens for when the user selects a Cls and updates the slots accordingly. */
+	private QueryListComponentListener clsListener = new QueryListComponentListener() {
+		public void valueChanged(Object value) {
+			if (value == null) {
+				slots = allSlots;
+			} else if (value instanceof Cls) {
+				Cls cls = (Cls) value;
+				slots = cls.getTemplateSlots();
+				// use the default slot if one exists
+				BrowserSlotPattern pattern = cls.getDirectBrowserSlotPattern();
+				if (pattern != null) {
+					selectSlot.setObject(pattern.getFirstSlot());
+				} else {
+					// check if the current slot is valid and reset if not
+					Slot slot = (Slot) selectSlot.getObject();
+					if ((slot != null) && !slots.contains(slot)) {
+						selectSlot.setObject(kb.getNameSlot());
+					}
+				}
+			}
+		}
+	};
+
+	/** Listens for when a slot is selected and updates the types combobox and value component. */
+	private QueryListComponentListener slotListener = new QueryListComponentListener() {
+		public void valueChanged(Object value) {
+			DefaultComboBoxModel model = getTypesModel();
+			// remove the old value component
+			pnlQueryComponents.remove(valueComponent);
+			if (value == null) {
+				// reset the types and value components
+				model.removeAllElements();
+				model.addElement("");
+				valueComponent = NULL_COMPONENT;
+				currentValueType = null;
+			} else if (value instanceof Slot) {
+				Slot slot = (Slot) value;
+				// update the types combobox (if different from current type)
+				ValueType type = slot.getValueType();
+				if (!type.equals(currentValueType)) {
+					currentValueType = type;
+					
+					String[] types = typesMap.get(type);
+					model.removeAllElements();
+					for (int i = 0; i < types.length; i++) {
+						model.addElement(types[i]);
+					}
+	
+					// load the symbol values
+					if (ValueType.SYMBOL.equals(type)) {
+						cmbModelSymbol.removeAllElements();
+						for (Iterator iter = slot.getAllowedValues().iterator(); iter.hasNext(); ) {
+							cmbModelSymbol.addElement(iter.next());
+						}
+					}
+	
+					// get the new value component
+					valueComponent = typesToComponentMap.get(type);
+					valueComponent.reset();
+				}
+			}
+			valueComponent.setBackground(pnlQueryComponents.getBackground());
+			pnlQueryComponents.add(valueComponent);
+			pnlQueryComponents.revalidate();
+			pnlQueryComponents.repaint();
+		}
+	};
+	    
 }

@@ -105,15 +105,27 @@ public class JProgressButton extends JButton {
 		sleep = speedInverse * 10L;
 	}
 	
+	/**
+	 * Sets the foreground and background colors for the progress bar.
+	 * @param foreground
+	 * @param background
+	 */
 	public void setProgressColors(Color foreground, Color background) {
 		bar.setForeground(foreground);
 		bar.setBackground(background);
 	}
 	
+	/**
+	 * Makes the progress bar visible.
+	 */
 	public void showProgressBar() {
 		showProgressBar(null);
 	}
 	
+	/**
+	 * Makes the progress bar visible and paints the string onto the progress bar.
+	 * @param msg the String to paint on the progress bar
+	 */
 	public void showProgressBar(String msg) {
 		bar.setStringPainted((msg != null));
 		bar.setString(msg); 
@@ -121,6 +133,9 @@ public class JProgressButton extends JButton {
 		runnable.start();
 	}
 	
+	/**
+	 * Hides the progress bar.
+	 */
 	public void hideProgressBar() {
 		if (runnable != null) {
 			runnable.stopRunning();
@@ -128,7 +143,6 @@ public class JProgressButton extends JButton {
 	}
 	
 	public static void main(String[] args) {
-
 		JDialog dlg = new JDialog();
 		dlg.setModal(true);
 		dlg.setTitle("Test");
@@ -143,7 +157,7 @@ public class JProgressButton extends JButton {
 				new Thread(new Runnable() {
 					public void run() {
 						try {
-							Thread.sleep(2000);
+							Thread.sleep(3000);
 						} catch (InterruptedException e1) {
 						}
 						btn.hideProgressBar();

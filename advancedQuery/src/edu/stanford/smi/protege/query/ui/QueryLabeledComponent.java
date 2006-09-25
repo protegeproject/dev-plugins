@@ -16,20 +16,28 @@ public class QueryLabeledComponent extends LabeledComponent {
 		super(label, c);
 	}
 
-	public QueryLabeledComponent(String label, Component c,
-			boolean verticallyStretchable) {
-		super(label, c, verticallyStretchable);
-	}
-
-	public QueryLabeledComponent(String label, Component c,
-			boolean verticallyStretchable, boolean swapedHeader) {
-		super(label, c, verticallyStretchable, swapedHeader);
-	}
-
-	public QueryLabeledComponent(String label, JScrollPane c) {
+	public QueryLabeledComponent(String label, Component c, boolean verticallyStretchable) {
 		super(label, c);
 	}
 	
+    public QueryLabeledComponent(String label, Component c, boolean verticallyStretchable, boolean swappedHeader) {
+    	super(label, c, verticallyStretchable, swappedHeader);
+    }	
+	
+    public void focus() {
+    	this.requestFocus();
+    	Component comp = getCenterComponent();
+		if (comp != null) {
+			if (comp instanceof JScrollPane) {
+				comp = ((JScrollPane) comp).getViewport().getView();;
+			}
+    		comp.requestFocus();
+    		if (comp instanceof JTextComponent) {
+				((JTextComponent) comp).selectAll();
+    		}
+    	}
+    }
+    
 	/**
 	 * Resets the center component if it is a {@link JTextComponent}, 
 	 * {@link JList}, or {@link JComboBox} (or one of the above contained in a {@link JScrollPane}).
