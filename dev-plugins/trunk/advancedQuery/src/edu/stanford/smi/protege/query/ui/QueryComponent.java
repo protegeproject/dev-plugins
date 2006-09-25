@@ -233,10 +233,6 @@ public class QueryComponent extends JPanel {
 			if (endsWith && !expr.startsWith("*")) {
 				expr = "*" + expr;
 			}
-                          // remove the following when the "~#en " problem is handled.
-                          if (!expr.startsWith("*")) {
-                            expr = "*" + expr;
-                          }
 			//System.out.println("Searching for '" + expr + "'...");
 			q = new OwnSlotValueQuery(slot, expr);
 		}
