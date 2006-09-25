@@ -10,6 +10,7 @@ import javax.swing.JPanel;
 import edu.stanford.smi.protege.model.KnowledgeBase;
 import edu.stanford.smi.protege.model.Slot;
 import edu.stanford.smi.protege.model.query.Query;
+import edu.stanford.smi.protege.query.InvalidQueryException;
 import edu.stanford.smi.protege.query.querytypes.AndQuery;
 import edu.stanford.smi.protege.query.querytypes.OrQuery;
 import edu.stanford.smi.protege.util.ListPanel;
@@ -29,21 +30,17 @@ public final class QueryUtil {
 	 * @param listPanel the list panel
 	 * @param andQuery if multiple queries exist then it will either create an {@link AndQuery} or an {@link OrQuery}.
 	 * @return {@link Query} or null if no query was valid
+	 * @throws InvalidQueryException if one of the query objects is invalid
 	 */
-	public static Query getQueryFromListPanel(ListPanel listPanel, boolean andQuery) {
+	public static Query getQueryFromListPanel(ListPanel listPanel, boolean andQuery) throws InvalidQueryException {
 		Query query = null;
 		Collection<JPanel> panels = listPanel.getPanels();
 		ArrayList<Query> queries = new ArrayList<Query>(panels.size());
 		for (Iterator iter = panels.iterator(); iter.hasNext(); ) {
 			ListPanelComponent comp = (ListPanelComponent) iter.next();
 			QueryComponent qc = (QueryComponent) comp.getMainPanel();
-			final Query q = qc.getQuery();
-			
-			// if q is null then this query is invalid and we must halt
-			if (q == null) {
-				queries.clear();
-				break;
-			}
+			// this throws InvalidQueryException
+			Query q = qc.getQuery();
 			queries.add(q);
 		}
 		if (queries.size() == 1) {

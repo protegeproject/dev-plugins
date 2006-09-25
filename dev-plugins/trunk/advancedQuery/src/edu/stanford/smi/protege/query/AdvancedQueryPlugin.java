@@ -323,9 +323,11 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 	 * Passes the {@link Query} on to {@link AdvancedQueryPlugin#doQuery(Query)} if the query is valid.
 	 */
 	private void doSearch() {
-		Query query = QueryUtil.getQueryFromListPanel(queriesListPanel, btnAndQuery.isSelected());
-		if (query != null) {
+		try {
+			Query query = QueryUtil.getQueryFromListPanel(queriesListPanel, btnAndQuery.isSelected());
 			doQuery(query);
+		} catch (InvalidQueryException e) {
+			System.err.println("Invalid query: " + e.getMessage());
 		}
 	}
 
@@ -336,7 +338,10 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 	 * @see KnowledgeBase#executeQuery(Query)
 	 */
 	private void doQuery(Query q) {
-		Set<Frame> results = kb.executeQuery(q);
+		Set<Frame> results = null;
+		if (q != null) {
+			results = kb.executeQuery(q);
+		}
 		if ((results == null) || (results.size() == 0)) {
 			lstResults.setListData(new String[] { "No results found." });
 		} else {
