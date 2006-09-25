@@ -29,4 +29,9 @@ public class PhoneticQuery implements Query, Serializable {
     LocalizeUtils.localize(slot, kb);
   }
 
+  @Override
+  public String toString() {
+	return "PhoneticQuery: slot=" + (slot != null ? slot.getBrowserText() : "null") + ", expression=" + expr;
+  }
+  
 }

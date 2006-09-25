@@ -2,6 +2,7 @@ package edu.stanford.smi.protege.query.querytypes;
 
 import java.io.Serializable;
 import java.util.Collection;
+import java.util.Iterator;
 
 import edu.stanford.smi.protege.model.KnowledgeBase;
 import edu.stanford.smi.protege.model.query.Query;
@@ -24,4 +25,14 @@ public class OrQuery implements Query, Serializable {
     }
   }
 
+  @Override
+  public String toString() {
+	StringBuffer buffer = new StringBuffer();
+	for (Iterator iter = disjuncts.iterator(); iter.hasNext();) {
+	  Query query = (Query) iter.next();
+	  buffer.append(query.toString());
+	}
+	return "OrQuery { " + buffer.toString() + " }";
+  }
+  
 }

@@ -3,6 +3,7 @@ package edu.stanford.smi.protege.util;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Container;
+import java.awt.Dimension;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
@@ -17,7 +18,9 @@ import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JList;
 import javax.swing.JPanel;
+import javax.swing.JTable;
 import javax.swing.border.Border;
+import javax.swing.text.JTextComponent;
 
 
 /**
@@ -29,30 +32,31 @@ import javax.swing.border.Border;
  */
 public class ListPanel extends JPanel {
 
-	private static final Color COLOR_SELECTED = new Color(240, 230, 202);
-	private static final Border BORDER_NOFOCUS = new CustomLineBorder(null, null, Color.lightGray, null, 1);
-	private static final Border BORDER_FOCUS = BorderFactory.createLineBorder(new Color(245, 165, 16), 1);
+	public static final Color DEFAULT_COLOR_SELECTED = new Color(240, 230, 202);
+	public static final Color DEFAULT_COLOR = new Color(236, 233, 216);
+	public static final Color DEFAULT_BORDER_COLOR = new Color(245, 165, 16);
+	private static final Border BORDER_NOFOCUS = new CustomLineBorder(Color.lightGray, null, Color.lightGray, null, 1);
 
 	class MouseFocus extends MouseAdapter implements FocusListener {
 		public void focusLost(FocusEvent e) {}
 		public void focusGained(FocusEvent e) {
 			if (e.getSource() instanceof JPanel) {
-				focus((JPanel) e.getSource());
+				focusPanel((JPanel) e.getSource());
 			}
 		}
 		public void mouseClicked(MouseEvent e) {
 			if (e.getSource() instanceof JPanel) {
-				focus((JPanel) e.getSource());
+				focusPanel((JPanel) e.getSource());
 			}
 		}
-		private void focus(JPanel pnl) {
+		private void focusPanel(JPanel pnl) {
 			if (pnl != focussedPnl) {
 				if (focussedPnl != null) {
-					ListPanel.unfocus(focussedPnl);
+					unfocus(focussedPnl);
 				}
 				focussedPnl = pnl;
 			}
-			ListPanel.focus(focussedPnl);
+			focus(focussedPnl);
 		}
 	}
 	
@@ -61,12 +65,49 @@ public class ListPanel extends JPanel {
 	private Box emptyBox = null;
 	private MouseFocus listener = new MouseFocus();
 	private JPanel focussedPnl = null;
-
+	private final int minimumHeight;
+	
+	private Border borderFocus = BorderFactory.createLineBorder(DEFAULT_BORDER_COLOR, 1);
+	private Color selectedColor = DEFAULT_COLOR_SELECTED;
+	private Color normalColor = DEFAULT_COLOR;
+	private final boolean changeColorOnSelection;
+	private final boolean highlightSelectedPanel;
+	
+	/**
+	 * Initializes this panel with a minimum height of 200 and true for changeColorOnSelection.
+	 */
 	public ListPanel() {
+		this(200, true, true);
+	}
+
+	/**
+	 * Initializes this panel.
+	 * @param minHeight the minimum height for the panel
+	 * @param highlightSelectedPanel if the selected/focussed panel should be highlighted with a border and a different bg color
+	 * @see ListPanel#setFocusBorderColor(Color)
+	 */
+	public ListPanel(int minHeight, boolean highlightSelectedPanel) {
+		this(minHeight, highlightSelectedPanel, highlightSelectedPanel);
+	}
+	
+	/**
+	 * Initializes this panel.
+	 * @param minHeight the minimum height for the panel
+	 * @param highlightSelectedPanel if the selected/focussed panel should be highlighted with a border and possibly a bg color
+	 * @param changeColorOnSelection if true then all children of the selected panel are colored in the selected color
+	 * @see ListPanel#setFocusBorderColor(Color)
+	 * @see ListPanel#setSelectedPanelColor(Color)
+	 * @see ListPanel#setPanelColor(Color)
+	 */
+	public ListPanel(int minHeight, boolean highlightSelectedPanel, boolean changeColorOnSelection) {
 		super();
+
+		this.minimumHeight = minHeight;
+		this.highlightSelectedPanel = highlightSelectedPanel;
+		this.changeColorOnSelection = changeColorOnSelection;
 		this.listeners = new ArrayList<ListPanelListener>(1);
 		setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
-		setBackground(Color.white);		
+		setBackground(new Color(240, 240, 240));		
 		add(getEmptyBox());
 	}
 	
@@ -78,14 +119,25 @@ public class ListPanel extends JPanel {
 		this.listeners.remove(listener);
 	}
 	
+	public void setSelectedPanelColor(Color c) {
+		this.selectedColor = c;
+	}
+	
+	public void setPanelColor(Color c) {
+		this.normalColor = c;
+	}
+	
+	public void setFocusBorderColor(Color c) {
+		c = (c == null ? DEFAULT_BORDER_COLOR : c);
+		borderFocus = BorderFactory.createLineBorder(c, 1);
+	}
+	
 	public void addPanel(JPanel pnl) {
 		addPanel(pnl, panels.size());
 	}
 
 	public void addPanel(final JPanel pnl, int index) {
 		remove(emptyBox);
-		pnl.addMouseListener(listener);
-		pnl.addFocusListener(listener);
 		if (index <= panels.size()) {
 			panels.add(index, pnl);
 			add(pnl, index);
@@ -94,15 +146,34 @@ public class ListPanel extends JPanel {
 			add(pnl);
 		}
 		add(emptyBox);
-		revalidate();
 		firePanelAdded(pnl);
-		pnl.setBorder(BORDER_NOFOCUS);
-		pnl.setFocusable(true);
-		ListPanel.addFocusListenerRecursively(pnl, new FocusAdapter() {
-			public void focusGained(FocusEvent e) {
-				listener.focus(pnl);
-			}
-		});
+
+		adjustHeight();
+		
+		// only add the focus listeners if we want to highlight the selected panel
+		if (highlightSelectedPanel) {
+			pnl.addMouseListener(listener);
+			pnl.addFocusListener(listener);
+			pnl.setFocusable(true);
+			ListPanel.addFocusListenerRecursively(pnl, new FocusAdapter() {
+				public void focusGained(FocusEvent e) {
+					listener.focusPanel(pnl);
+				}
+			});
+			unfocus(pnl);
+		} else {
+			pnl.setBorder(BORDER_NOFOCUS);
+		}
+		revalidate();
+	}
+	
+	/** adjust the height to ensure that all the panels are visible */
+	private void adjustHeight() {
+		int height = emptyBox.getPreferredSize().height;
+		for (JPanel p : panels) {
+			height += p.getPreferredSize().height;
+		}
+		setPreferredSize(new Dimension(getPreferredSize().width, height));
 	}
 	
 	protected void firePanelAdded(JPanel pnl) {
@@ -118,16 +189,19 @@ public class ListPanel extends JPanel {
 	}
 	
 	public void removePanel(JPanel pnl) {
-		remove(pnl);
-		panels.remove(pnl);
-		revalidate();
-		repaint();
-		pnl.removeMouseListener(listener);
-		pnl.removeFocusListener(listener);
-		firePanelRemoved(pnl);
-		
-		if (pnl == focussedPnl) {
-			focussedPnl = null;
+		if (panels.remove(pnl)) {
+			remove(pnl);
+			if (highlightSelectedPanel) {
+				pnl.removeMouseListener(listener);
+				pnl.removeFocusListener(listener);
+			}
+			if (pnl == focussedPnl) {
+				focussedPnl = null;
+			}
+			firePanelRemoved(pnl);
+			
+			revalidate();
+			repaint();
 		}
 	}
 
@@ -141,6 +215,7 @@ public class ListPanel extends JPanel {
 	public void removeAllPanels() {
 		panels.clear();
 		removeAll();
+		add(emptyBox);
 		focussedPnl = null;
 	}		
 	
@@ -149,7 +224,9 @@ public class ListPanel extends JPanel {
 		for (int i = 0; i < panels.size(); i++) {
 			add(panels.get(i));
 		}
+		add(emptyBox);
 		revalidate();
+		repaint();
 		if (focussedPnl != null) {
 			focussedPnl.requestFocus();
 		}
@@ -159,7 +236,7 @@ public class ListPanel extends JPanel {
 		if (emptyBox == null) {
 			emptyBox = Box.createVerticalBox();
 		    emptyBox.add(Box.createVerticalGlue());
-		    emptyBox.add(Box.createVerticalStrut(250));
+		    emptyBox.add(Box.createVerticalStrut(minimumHeight));
 		}
 		return emptyBox;
 	}	
@@ -184,14 +261,38 @@ public class ListPanel extends JPanel {
 		}
 	}	
 	
-	private static void focus(JPanel pnl) {
-		pnl.setBorder(BORDER_FOCUS);
-		pnl.setBackground(COLOR_SELECTED);
+	private void focus(JPanel pnl) {
+		if (highlightSelectedPanel) {
+			pnl.setBorder(borderFocus);
+			if (changeColorOnSelection) {
+				setColorRecursively(pnl, selectedColor);
+			}
+		}
 	}
 	
-	private static void unfocus(JPanel pnl) {
-		pnl.setBorder(BORDER_NOFOCUS);
-		pnl.setBackground(Color.white);
+	private void unfocus(JPanel pnl) {
+		if (highlightSelectedPanel) {
+			pnl.setBorder(BORDER_NOFOCUS);
+			if (changeColorOnSelection) {
+				setColorRecursively(pnl, normalColor);
+			}
+		}
+	}
+	
+	/** 
+	 * Recursively sets the background color of the container and its children.
+	 * {@link JTextComponent}, {@link JList}, and {@link JTable} are not colored. 
+	 */
+	private static void setColorRecursively(Container c, Color color) {
+		c.setBackground(color);
+		for (int i = 0; i < c.getComponentCount(); i++) {
+			Component comp = c.getComponent(i);
+			if ((comp instanceof Container) && !(comp instanceof JTextComponent) && 
+				!(comp instanceof JList) && !(comp instanceof JTable) && !(comp instanceof ListPanel)) {
+				Container child = (Container) comp;
+				setColorRecursively(child, color);
+			}
+		}
 	}
 
 	public void moveSelectedUp() {
