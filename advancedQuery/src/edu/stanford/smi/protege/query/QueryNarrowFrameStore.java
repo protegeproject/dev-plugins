@@ -10,6 +10,7 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import edu.stanford.smi.protege.exception.ModificationException;
 import edu.stanford.smi.protege.exception.OntologyException;
 import edu.stanford.smi.protege.exception.ProtegeError;
 import edu.stanford.smi.protege.exception.ProtegeIOException;
@@ -31,6 +32,7 @@ import edu.stanford.smi.protege.query.querytypes.OwnSlotValueQuery;
 import edu.stanford.smi.protege.query.querytypes.PhoneticQuery;
 import edu.stanford.smi.protege.util.ApplicationProperties;
 import edu.stanford.smi.protege.util.Log;
+import edu.stanford.smi.protege.util.SimpleStringMatcher;
 import edu.stanford.smi.protege.util.transaction.TransactionMonitor;
 import edu.stanford.smi.protegex.owl.model.OWLModel;
 
@@ -45,6 +47,8 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
   private boolean useStdLucene  = false;
   private StdIndexer      stdIndexer;
   private PhoneticIndexer phoneticIndexer;
+  
+  private boolean indexingInProgress = false;
   
   /*-----------------------------------------------------------
    * Query Narrow Frame Store support methods.
@@ -71,9 +75,26 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
   }
   
   public void indexOntologies() {
-    phoneticIndexer.indexOntologies();
-    if (useStdLucene) {
-      stdIndexer.indexOntologies();
+    synchronized (kbLock) {
+      indexingInProgress = true;
+    }
+    try {
+      phoneticIndexer.indexOntologies();
+      if (useStdLucene) {
+        stdIndexer.indexOntologies();
+      }
+    } finally {
+      synchronized (kbLock) {
+        indexingInProgress = false;
+      }
+    }
+  }
+  
+  public void checkWriteable() {
+    synchronized (kbLock) {
+      if (indexingInProgress) {
+        throw new ModificationException("Server project in read-only mode: Indexing in Progress");
+      }
     }
   }
   
@@ -82,7 +103,12 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
    * executeQuery methods
    */
   
-  public void executeQuery(final Query query, final QueryCallback qc) {
+  public void executeQuery(final Query query, final QueryCallback qc) throws OntologyException, ProtegeIOException {
+    synchronized (kbLock) {
+      if (indexingInProgress) {
+        throw new ProtegeIOException("Lucene Indicies not ready yet: Indexing in progress");
+      }
+    }
     new Thread() {
       public void run() {
         try {
@@ -154,7 +180,29 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
         throw new ProtegeIOException(ioe);
       } 
     } else {
-      return delegate.getMatchingFrames(query.getSlot(), null, false, query.getExpr(), -1);
+      String searchString = query.getExpr();
+      if (searchString.startsWith("*")) {
+        return delegate.getMatchingFrames(query.getSlot(), null, false, searchString, -1);
+      }
+      else {
+        SimpleStringMatcher matcher = new SimpleStringMatcher(searchString);
+        Set<Frame> frames = delegate.getMatchingFrames(query.getSlot(), null, false, 
+                                                       "*" + searchString, -1);
+        Set<Frame> results = new HashSet<Frame>();
+        for (Frame frame : frames)  {
+          boolean found = false;
+          for (Object o : delegate.getValues(frame, query.getSlot(), null, false)) {
+            if (o instanceof String && matcher.isMatch((String) o)) {
+              found = true;
+              break;
+            }
+          }
+          if (found) {
+            results.add(frame);
+          }
+        }
+        return results;
+      }
     }
   }
   
@@ -241,7 +289,8 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
   }
 
   public void addValues(Frame frame, Slot slot, Facet facet,
-                        boolean isTemplate, Collection values) {
+                        boolean isTemplate, Collection values) throws ProtegeIOException {
+    checkWriteable();
     if (log.isLoggable(Level.FINE)) {
       log.fine("addValues");
     }
@@ -255,12 +304,14 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
   }
 
   public void moveValue(Frame frame, Slot slot, Facet facet,
-                        boolean isTemplate, int from, int to) {
+                        boolean isTemplate, int from, int to) throws ProtegeIOException {
+    checkWriteable();
     delegate.moveValue(frame, slot, facet, isTemplate, from, to);
   }
 
   public void removeValue(Frame frame, Slot slot, Facet facet,
-                          boolean isTemplate, Object value) {
+                          boolean isTemplate, Object value) throws ProtegeIOException {
+    checkWriteable();
     if (log.isLoggable(Level.FINE)) {
       log.fine("Remove  Value");
     }
@@ -274,7 +325,8 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
   }
 
   public void setValues(Frame frame, Slot slot, Facet facet,
-                        boolean isTemplate, Collection values) {
+                        boolean isTemplate, Collection values) throws ProtegeIOException {
+    checkWriteable();
     if (log.isLoggable(Level.FINE)) {
       log.fine("setValues");
     }
@@ -313,7 +365,8 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
     return delegate.getMatchingReferences(value, maxMatches);
   }
 
-  public void deleteFrame(Frame frame) {
+  public void deleteFrame(Frame frame) throws ProtegeIOException {
+    checkWriteable();
     if (log.isLoggable(Level.FINE)) {
       log.fine("deleteFrame ");
     }
@@ -332,7 +385,8 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
     return delegate.getClosure(frame, slot, facet, isTemplate);
   }
 
-  public void replaceFrame(Frame frame) {
+  public void replaceFrame(Frame frame) throws ProtegeIOException {
+    checkWriteable();
     delegate.replaceFrame(frame);
   }
 
