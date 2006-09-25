@@ -56,7 +56,10 @@ public abstract class CoreIndexer {
   private static final String SLOT_NAME                 = "slotName";
   private static final String CONTENTS_FIELD            = "contents";
   
-  public CoreIndexer(Set<Slot> searchableSlots, NarrowFrameStore delegate, String path, Object kbLock) {
+  public CoreIndexer(Set<Slot> searchableSlots, 
+                     NarrowFrameStore delegate, 
+                     String path, 
+                     Object kbLock) {
     this.searchableSlots = searchableSlots;
     this.delegate = delegate;
     this.kbLock = kbLock;
