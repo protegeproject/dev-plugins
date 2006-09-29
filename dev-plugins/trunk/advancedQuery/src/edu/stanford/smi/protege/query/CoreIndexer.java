@@ -173,8 +173,6 @@ public abstract class CoreIndexer {
   }
   
   protected Query generateLuceneQuery(Frame frame) throws IOException {
-    String frameLocal   = "" + frame.getFrameID().getLocalPart();
-    String frameProject = "" + frame.getFrameID().getMemoryProjectPart();
     BooleanQuery query  = new  BooleanQuery();
     
     Term term;
@@ -185,10 +183,6 @@ public abstract class CoreIndexer {
   }
   
   protected Query generateLuceneQuery(Frame frame, Slot slot) throws IOException {
-    String frameLocal   = "" + frame.getFrameID().getLocalPart();
-    String frameProject = "" + frame.getFrameID().getMemoryProjectPart();
-    String slotLocal    = "" + slot.getFrameID().getLocalPart();
-    String slotProject  = "" + slot.getFrameID().getMemoryProjectPart();
     BooleanQuery query  = new  BooleanQuery();
     
     Term term;
