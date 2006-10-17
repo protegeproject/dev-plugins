@@ -25,7 +25,6 @@ import org.apache.lucene.search.Searcher;
 import org.apache.lucene.search.TermQuery;
 
 import edu.stanford.smi.protege.model.Frame;
-import edu.stanford.smi.protege.model.FrameID;
 import edu.stanford.smi.protege.model.Model;
 import edu.stanford.smi.protege.model.Slot;
 import edu.stanford.smi.protege.model.framestore.NarrowFrameStore;
@@ -220,6 +219,9 @@ public abstract class CoreIndexer {
   
   private String getFrameName(Frame frame) {
     Collection values = delegate.getValues(frame, nameSlot, null, false);
+    if (values == null || values.isEmpty()) {
+      return null;
+    }
     return (String) values.iterator().next();
   }
   
@@ -228,13 +230,25 @@ public abstract class CoreIndexer {
     return frames.iterator().next();
   }
   
+  private boolean isAnonymous(Frame frame) {
+    if (!owlMode) {
+      return false;
+    }
+    
+    String name = getFrameName(frame);
+    if (name == null) {
+      return true;
+    }
+    return name.startsWith("@");
+  }
+  
   
   /* --------------------------------------------------------------------------
    * Update Utilities for the Narrow Frame Store
    */
   
   public void addValues(Frame frame, Slot slot, Collection values) { 
-    if (status == Status.DOWN || !searchableSlots.contains(slot)) {
+    if (status == Status.DOWN || !searchableSlots.contains(slot) || isAnonymous(frame)) {
       return;
     }
     IndexWriter writer = null;
