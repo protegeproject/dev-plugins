@@ -1,0 +1,30 @@
+<?xml version = "1.0" encoding = "utf-8"?>
+<project name = "Developer Plugins" default = "compile" basedir = ".">
+
+   <target name="advancedQuery">
+     <ant dir="./advancedQuery" target="dist"/>
+   </target>
+
+   <target name="serverStats">
+     <ant dir="./serverStats" target="dist"/>
+   </target>
+
+   <target name="transaction">
+     <ant dir="./transaction" target="dist"/>
+   </target>
+
+   <target name="frameIDBrowserSlot">
+     <ant dir="./frameIDBrowserSlot" target="dist"/>
+   </target>
+
+
+   <target name="all" depends="advancedQuery,serverStats,transaction,frameIDBrowserSlot"/>
+
+   <target name="clean">
+     <ant dir="./advancedQuery" target="clean"/>
+     <ant dir="./serverStats" target="clean"/> 
+     <ant dir="./transaction" target="clean"/>
+     <ant dir="./frameIDBrowserSlot" target="clean"/>
+   </target>
+
+</project>
