@@ -193,7 +193,9 @@ public abstract class CoreIndexer {
   }
   
   private void died(IOException ioe) {
-    Log.getLogger().log(Level.WARNING, "Search index update failed",ioe);
+    Log.getLogger().warning("Search index update failed " + ioe);
+    Log.getLogger().warning("This exception will not interfere with normal (non-query) operations");
+    Log.getLogger().warning("suggest reindexing to get the lucene indicies back");
     status = Status.DOWN;
   }
   
