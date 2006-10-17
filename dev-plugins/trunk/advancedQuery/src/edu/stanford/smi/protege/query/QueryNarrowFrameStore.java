@@ -49,6 +49,7 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
   private PhoneticIndexer phoneticIndexer;
   
   private boolean indexingInProgress = false;
+  private boolean indexHasProblems = false;
   
   /*-----------------------------------------------------------
    * Query Narrow Frame Store support methods.
@@ -76,6 +77,7 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
   
   public void indexOntologies() {
     synchronized (kbLock) {
+      indexHasProblems = false;
       indexingInProgress = true;
     }
     try {
@@ -229,6 +231,19 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
     return results;
   }
   
+  public void handleErrorDuringNormalOperations(Throwable t) {
+    if (!indexHasProblems) {
+      indexHasProblems = true;
+      Log.getLogger().log(Level.WARNING, "Problem found updating index", t);
+      Log.getLogger().warning("This will not interfere with normal operations but consider reindexing");
+      Log.getLogger().warning("Future messages will go to debug logging");
+    } else {
+      if (log.isLoggable(Level.FINE)) {
+        log.log(Level.FINE, "Exception caught updating index", t);
+      }
+    }
+  }
+  
  
   /*---------------------------------------------------------------------
    *  Common Narrow Frame Store Functions (excepting executeQuery)
@@ -295,11 +310,15 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
       log.fine("addValues");
     }
     delegate.addValues(frame, slot, facet, isTemplate, values);
-    if (facet == null && !isTemplate) {
-      phoneticIndexer.addValues(frame, slot, values);
-      if (useStdLucene) {
-        stdIndexer.addValues(frame, slot, values);
+    try {
+      if (facet == null && !isTemplate) {
+        phoneticIndexer.addValues(frame, slot, values);
+        if (useStdLucene) {
+          stdIndexer.addValues(frame, slot, values);
+        }
       }
+    } catch (Exception e) {
+      handleErrorDuringNormalOperations(e);
     }
   }
 
@@ -316,11 +335,15 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
       log.fine("Remove  Value");
     }
     delegate.removeValue(frame, slot, facet, isTemplate, value);
-    if (facet == null && !isTemplate) {
-      phoneticIndexer.removeValue(frame, slot, value);
-      if (useStdLucene) {
-        stdIndexer.removeValue(frame, slot, value);
+    try {
+      if (facet == null && !isTemplate) {
+        phoneticIndexer.removeValue(frame, slot, value);
+        if (useStdLucene) {
+          stdIndexer.removeValue(frame, slot, value);
+        }
       }
+    } catch (Exception e) {
+      handleErrorDuringNormalOperations(e);
     }
   }
 
@@ -331,13 +354,17 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
       log.fine("setValues");
     }
     delegate.setValues(frame, slot, facet, isTemplate, values);
-    if (facet == null && !isTemplate) {
-      phoneticIndexer.removeValues(frame, slot);
-      phoneticIndexer.addValues(frame, slot, values);
-      if (useStdLucene) {
-        stdIndexer.removeValues(frame, slot);
-        stdIndexer.addValues(frame, slot, values);
+    try {
+      if (facet == null && !isTemplate) {
+        phoneticIndexer.removeValues(frame, slot);
+        phoneticIndexer.addValues(frame, slot, values);
+        if (useStdLucene) {
+          stdIndexer.removeValues(frame, slot);
+          stdIndexer.addValues(frame, slot, values);
+        }
       }
+    } catch (Exception e) {
+      handleErrorDuringNormalOperations(e);
     }
   }
 
@@ -371,9 +398,13 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
       log.fine("deleteFrame ");
     }
     delegate.deleteFrame(frame);
-    phoneticIndexer.removeValues(frame);
-    if (useStdLucene) {
-      stdIndexer.removeValues(frame);
+    try {
+      phoneticIndexer.removeValues(frame);
+      if (useStdLucene) {
+        stdIndexer.removeValues(frame);
+      }
+    } catch (Exception e) {
+      handleErrorDuringNormalOperations(e);
     }
   }
 
