@@ -175,8 +175,11 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 				btnProgress.showProgressBar("Indexing...");
 				new Thread(new Runnable() {
 					public void run() {
+					  try {
 						new IndexOntologies(kb).execute();
+					  } finally {
 						btnProgress.hideProgressBar();
+					  }
 					}
 				}).start();
 		    }
