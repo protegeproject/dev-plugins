@@ -24,6 +24,8 @@ import org.apache.lucene.search.Query;
 import org.apache.lucene.search.Searcher;
 import org.apache.lucene.search.TermQuery;
 
+import edu.stanford.smi.protege.exception.ProtegeException;
+import edu.stanford.smi.protege.exception.ProtegeIOException;
 import edu.stanford.smi.protege.model.Frame;
 import edu.stanford.smi.protege.model.Model;
 import edu.stanford.smi.protege.model.Slot;
@@ -82,7 +84,8 @@ public abstract class CoreIndexer {
   }
   
   @SuppressWarnings("unchecked")
-  public void indexOntologies() {
+  public void indexOntologies() throws ProtegeException {
+    boolean errorsFound = false;
     long start = System.currentTimeMillis();
     Log.getLogger().info("Started indexing ontology with " + searchableSlots.size() + " searchable slots");
     IndexWriter myWriter = null;
@@ -94,15 +97,21 @@ public abstract class CoreIndexer {
       }
       for (Frame frame : frames) {
         for (Slot slot : searchableSlots) {
-          List values;
-          synchronized (kbLock) {
-            values = delegate.getValues(frame, slot, null, false);
-          }
-          for (Object value : values) {
-            if (!(value instanceof String)) {
-              continue;
+          try {
+            List values;
+            synchronized (kbLock) {
+              values = delegate.getValues(frame, slot, null, false);
             }
-            addUpdate(myWriter, frame, slot, (String) value);
+            for (Object value : values) {
+              if (!(value instanceof String)) {
+                continue;
+              }
+              addUpdate(myWriter, frame, slot, (String) value);
+            }
+          } catch (Exception e) {
+            Log.getLogger().log(Level.WARNING, "Exception caught indexing ontologies", e);
+            Log.getLogger().warning("continuing...");
+            errorsFound = true;
           }
         }
       }
@@ -112,8 +121,12 @@ public abstract class CoreIndexer {
                            + ((System.currentTimeMillis() - start)/1000) + " seconds)");
     } catch (IOException ioe) {
       died(ioe);
+      errorsFound = true;
     } finally {
       forceClose(myWriter);
+    }
+    if (errorsFound) {  // ToDo - do this *much* better
+      throw new ProtegeException("Errors Found - see console log for details");
     }
   }
   
