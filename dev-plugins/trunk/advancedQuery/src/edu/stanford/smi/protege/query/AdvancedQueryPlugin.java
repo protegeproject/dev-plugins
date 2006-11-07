@@ -2,6 +2,7 @@ package edu.stanford.smi.protege.query;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.event.ActionEvent;
@@ -17,6 +18,7 @@ import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
 import javax.swing.Icon;
 import javax.swing.JButton;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
 import javax.swing.JRadioButton;
@@ -38,7 +40,6 @@ import edu.stanford.smi.protege.resource.Icons;
 import edu.stanford.smi.protege.server.framestore.RemoteClientFrameStore;
 import edu.stanford.smi.protege.server.metaproject.Operation;
 import edu.stanford.smi.protege.server.metaproject.impl.OperationImpl;
-import edu.stanford.smi.protege.ui.FrameRenderer;
 import edu.stanford.smi.protege.ui.ListFinder;
 import edu.stanford.smi.protege.util.ComponentFactory;
 import edu.stanford.smi.protege.util.ComponentUtilities;
@@ -63,6 +64,8 @@ import edu.stanford.smi.protegex.owl.ui.icons.OverlayIcon;
  */
 public class AdvancedQueryPlugin extends AbstractTabWidget {
 
+	private static final String SEARCH_RESULTS = "Search Results";
+
 	private static final long serialVersionUID = -5589620508506925170L;
 
 	public static final Operation INDEX_OPERATION = new OperationImpl("Generate Lucene Indicies");
@@ -78,12 +81,17 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 	private JRadioButton btnAndQuery;
 	private JRadioButton btnOrQuery;
 	private JPanel pnlQueryBottom;
+	private JButton btnSearch;
+	private LabeledComponent resultsComponent;
+	private QueryFrameRenderer frameRenderer;
 	
 	public AdvancedQueryPlugin() {
 		super();
 		this.canIndex = false;
 		this.isOWL = false;
 		this.slots = Collections.emptySet();
+		this.frameRenderer = new QueryFrameRenderer();
+		this.frameRenderer.setMatchColor(new Color(24, 72, 124));
 	}
 	
 	/**
@@ -146,19 +154,19 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 		pnlLeft.add(getQueryBottomPanel(), BorderLayout.SOUTH);		
 
 		SelectableList lst = getResultsList();
-		LabeledComponent lcRight = new LabeledComponent("Search Results", new JScrollPane(lst), true);
-		lcRight.addHeaderButton(getViewAction());
-		lcRight.setFooterComponent(new ListFinder(lst, "Find Instance"));
+		this.resultsComponent = new LabeledComponent(SEARCH_RESULTS, new JScrollPane(lst), true);
+		resultsComponent.addHeaderButton(getViewAction());
+		resultsComponent.setFooterComponent(new ListFinder(lst, "Find Instance"));
 		
 		// Add action for showing in NCI Edit Tab
 		if (isOWL) {
 			// TODO different icon?
-			lcRight.addHeaderButton(new ViewInNCIEditorAction("View Cls in the NCI Edit Tab", lstResults, Icons.getViewClsIcon()));
+			resultsComponent.addHeaderButton(new ViewInNCIEditorAction("View Cls in the NCI Edit Tab", lstResults, Icons.getViewClsIcon()));
 		}
 
 		JSplitPane splitter = ComponentFactory.createLeftRightSplitPane();
 		splitter.setLeftComponent(lcLeft);
-		splitter.setRightComponent(lcRight);
+		splitter.setRightComponent(resultsComponent);
         add(splitter, BorderLayout.CENTER);
 	}
 
@@ -250,7 +258,7 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 			
 			pnlQueryBottom.add(Box.createHorizontalGlue());
 			
-			final JButton btnSearch = new JButton(new AbstractAction("Search", Icons.getFindIcon()) {
+			btnSearch = new JButton(new AbstractAction("Search", Icons.getFindIcon()) {
 				public void actionPerformed(ActionEvent e) {
 					doSearch();
 				}
@@ -271,7 +279,7 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 	private SelectableList getResultsList() {
 		if (lstResults == null) {
 	        lstResults = ComponentFactory.createSelectableList(null, false);
-	        lstResults.setCellRenderer(new FrameRenderer());
+	        lstResults.setCellRenderer(frameRenderer);
 	        lstResults.addMouseListener(new DoubleClickActionAdapter(getViewAction()));
 		}
 		return lstResults;
@@ -326,12 +334,36 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 	 * Passes the {@link Query} on to {@link AdvancedQueryPlugin#doQuery(Query)} if the query is valid.
 	 */
 	private void doSearch() {
-		try {
-			Query query = QueryUtil.getQueryFromListPanel(queriesListPanel, btnAndQuery.isSelected());
-			doQuery(query);
-		} catch (InvalidQueryException e) {
-			System.err.println("Invalid query: " + e.getMessage());
-		}
+		btnSearch.setEnabled(false);
+		resultsComponent.setHeaderLabel(SEARCH_RESULTS + "  (performing search...)");
+		final Cursor oldCursor = getCursor();
+		setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
+
+		// start searching in a new thread
+		SwingUtilities.invokeLater(new Runnable() {
+			public void run() {
+				int hits = 0;
+				boolean error = false;
+				try {
+					Query query = QueryUtil.getQueryFromListPanel(queriesListPanel, btnAndQuery.isSelected());
+					hits = doQuery(query);
+				} catch (InvalidQueryException e) {
+					System.err.println("Invalid query: " + e.getMessage());
+					error = true;
+				} catch (Exception ex) {
+					// IOException happens for "sounds like" queries when the ontology hasn't been indexed
+					final String msg = "An exception occurred during the query.\n" + 
+						"This probably happened because this ontology is not indexed yet.\n" + ex.getMessage();
+					JOptionPane.showMessageDialog(AdvancedQueryPlugin.this, msg, "Error", JOptionPane.ERROR_MESSAGE);
+					error = true;
+				} finally {
+					setCursor(oldCursor);
+					btnSearch.setEnabled(true);
+					String matchString = (error ? "" : "  (" + hits + " match" + (hits == 1 ? ")" : "es)"));
+					resultsComponent.setHeaderLabel(SEARCH_RESULTS + matchString);
+				}
+			}
+		});
 	}
 
 	/**
@@ -339,17 +371,22 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 	 * into the list. 
 	 * @param q the query to perform
 	 * @see KnowledgeBase#executeQuery(Query)
+	 * @return int number of hits for the query
 	 */
-	private void doQuery(Query q) {
+	private int doQuery(Query q) {
 		Set<Frame> results = null;
 		if (q != null) {
 			results = kb.executeQuery(q);
 		}
-		if ((results == null) || (results.size() == 0)) {
+		int hits = (results != null ? results.size() : 0);
+		if (hits == 0) {
+			frameRenderer.setQuery(null);	// don't bold anything
 			lstResults.setListData(new String[] { "No results found." });
 		} else {
+			frameRenderer.setQuery(q);		// bold the matching results 
 			lstResults.setListData(new Vector<Frame>(results));
 		}
+		return hits;
 	}
 	
 }
