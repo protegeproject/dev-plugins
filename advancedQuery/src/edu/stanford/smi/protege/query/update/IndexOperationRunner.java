@@ -23,7 +23,7 @@ public class IndexOperationRunner implements Runnable {
         }
         operation = operations.remove(0);
       }
-      operation.execute();
+      operation.run();
     }
     
   }
@@ -45,7 +45,7 @@ public class IndexOperationRunner implements Runnable {
   public void flushAndReplace(IndexOperation operation) {
     synchronized (lock) {
       for (IndexOperation op : operations) {
-        op.flush();
+        op.cancel(true);
       }
       operations = new ArrayList<IndexOperation>();
       operations.add(operation);
