@@ -1,11 +1,11 @@
 package edu.stanford.smi.protege.query.update;
 
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
-public class IndexOperation<V> implements Future<V> {
+public abstract class IndexOperation<V> implements Future<V>, Runnable {
   private boolean cancelled = false;
   private boolean done      = false;
   private V result;
@@ -20,25 +20,34 @@ public class IndexOperation<V> implements Future<V> {
     return true;
   }
 
-  public synchronized V get() throws InterruptedException, ExecutionException {
-
+  public V get() throws InterruptedException, ExecutionException {
+    return get(0, TimeUnit.MILLISECONDS);
   }
 
-  public V get(long arg0, TimeUnit arg1) throws InterruptedException, ExecutionException, TimeoutException {
+  public synchronized V get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException {
+    long mstimeout = TimeUnit.MILLISECONDS.convert(timeout, unit);
     while (!done) {
-      this.wait();
+      if (timeout == 0) {
+        this.wait();
+      }
+      else {
+        this.wait(mstimeout);
+      }
     }
-    if ()
-    if (result != null)
-    // TODO Auto-generated method stub
-    return null;
+    if (isCancelled()) {
+      throw new CancellationException("Operation cancelled");
+    }
+    else if (t != null) {
+      throw new ExecutionException(t);
+    }
+    return result;
   }
 
   public synchronized boolean isCancelled() {
     return cancelled;
   }
 
-  public boolean isDone() {
+  public synchronized boolean isDone() {
     return done;
   }
   
