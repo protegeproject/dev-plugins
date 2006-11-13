@@ -51,22 +51,30 @@ public final class QueryUtil {
 		return query;
 	}
 	
+	public static void addQueryComponent(KnowledgeBase kb, Collection<Slot> slots, Slot defaultSlot, ListPanel listPanel) {
+		addQueryComponent(kb, slots, defaultSlot, listPanel, "");
+	}
+	
+	
 	/**
 	 * Adds a new query component to the {@link ListPanel}.
 	 * @param kb the {@link KnowledgeBase} or {@link OWLModel}
 	 * @param slots the allowed slots
 	 * @param defaultSlot the slot to display by default (must be contained in the slots Collection)
 	 * @param listPanel the {@link ListPanel} to add too
+	 * @param defaultVaule the default value to be searched for as a String
 	 */
-	public static void addQueryComponent(KnowledgeBase kb, Collection<Slot> slots, Slot defaultSlot, ListPanel listPanel) {
-		QueryComponent qc = new QueryComponent(kb, slots, defaultSlot);
+	public static void addQueryComponent(KnowledgeBase kb, Collection<Slot> slots, Slot defaultSlot, ListPanel listPanel, String defaultValue) {
+		QueryComponent qc = new QueryComponent(kb, slots, defaultSlot, defaultValue);
 		ListPanelComponent comp = new ListPanelComponent(listPanel, qc, false, true);
 		comp.setMinimumSize(new Dimension(60, 56));
 		comp.setPreferredSize(new Dimension(500, 56));
 		comp.setMaximumSize(new Dimension(5000, 56));
 		comp.setRemoveActionToolTip("Remove query");
 		listPanel.addPanel(comp);
-	}	
+	}
+	
+		
 
 	/**
 	 * Adds a new OWL restriction query component to the {@link ListPanel}.
