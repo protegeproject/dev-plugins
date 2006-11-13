@@ -119,6 +119,9 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 		addQueryComponent();
 	}
 	
+	
+	
+	
 	/**
 	 * Creates the GUI, initializing the components and adding them to the tab.
 	 */
@@ -314,6 +317,13 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 		};
 	}	
 
+	public void setQueryComponent(Slot slot, String defaultValue ){
+		queriesListPanel.removeAllPanels();
+		QueryUtil.addQueryComponent(kb, slots, (slot == null ? defaultSlot:slot), queriesListPanel, defaultValue);
+		queriesListPanel.repaint();
+		queriesListPanel.revalidate();
+	}
+	
 	private void addQueryComponent() {
 		QueryUtil.addQueryComponent(kb, slots, defaultSlot, queriesListPanel);
 	}
@@ -333,7 +343,7 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 	 * If there are multiple queries then either an {@link AndQuery} or an {@link OrQuery} are used.  
 	 * Passes the {@link Query} on to {@link AdvancedQueryPlugin#doQuery(Query)} if the query is valid.
 	 */
-	private void doSearch() {
+	public void doSearch() {
 		btnSearch.setEnabled(false);
 		resultsComponent.setHeaderLabel(SEARCH_RESULTS + "  (performing search...)");
 		final Cursor oldCursor = getCursor();
