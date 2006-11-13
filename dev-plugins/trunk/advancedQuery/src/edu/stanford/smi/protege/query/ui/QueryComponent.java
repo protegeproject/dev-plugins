@@ -90,22 +90,37 @@ public class QueryComponent extends JPanel {
 	public QueryComponent(KnowledgeBase kb, Collection<Slot> slots) {
 		this(kb, slots, kb.getNameSlot());
 	}
-
+	
 	/**
 	 * Initializes this component with the given {@link KnowledgeBase} and selectable {@link Slot}s.
 	 * The defaultSlot is used <b>IF</b> if is contained in the slots collection.
 	 * @param slots the available slots (which the user can choose from)
-	 * @param defaultSlot the slot to display by default 
+	 * @param defaultSlot the slot to display by default	
 	 */
 	public QueryComponent(KnowledgeBase kb, Collection<Slot> slots, Slot defaultSlot) {
+		this(kb, slots, defaultSlot, "");
+	}
+	
+	/**
+	 * Initializes this component with the given {@link KnowledgeBase} and selectable {@link Slot}s.
+	 * The defaultSlot is used <b>IF</b> if is contained in the slots collection.
+	 * @param slots the available slots (which the user can choose from)
+	 * @param defaultSlot the slot to display by default
+	 * @param value the default value to be searched
+	 */
+	public QueryComponent(KnowledgeBase kb, Collection<Slot> slots, Slot defaultSlot, String value) {
 		this.kb = kb;
 		this.slots = slots;
 		this.allSlots = slots;
 		this.defaultSlot = defaultSlot;
 		this.typesMap = new HashMap<ValueType, String[]>(15);
 		this.typesToComponentMap = new HashMap<ValueType, QueryLabeledComponent>(15);
-		
+					
 		initialize();
+		
+		if (value != null && value.length() > 0 ) {
+			((JTextField)this.valueComponent.getCenterComponent()).setText(value);
+		} 
 	}
 	
 	protected KnowledgeBase getKnowledgeBase() {
