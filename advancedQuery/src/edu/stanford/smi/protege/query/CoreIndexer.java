@@ -6,8 +6,11 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import javax.net.ssl.SSLEngineResult.Status;
 
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.Token;
@@ -25,11 +28,11 @@ import org.apache.lucene.search.Searcher;
 import org.apache.lucene.search.TermQuery;
 
 import edu.stanford.smi.protege.exception.ProtegeException;
-import edu.stanford.smi.protege.exception.ProtegeIOException;
 import edu.stanford.smi.protege.model.Frame;
 import edu.stanford.smi.protege.model.Model;
 import edu.stanford.smi.protege.model.Slot;
 import edu.stanford.smi.protege.model.framestore.NarrowFrameStore;
+import edu.stanford.smi.protege.util.FutureTask;
 import edu.stanford.smi.protege.util.Log;
 
 public abstract class CoreIndexer {
@@ -57,6 +60,9 @@ public abstract class CoreIndexer {
   private static final String SLOT_NAME                 = "slotName";
   private static final String CONTENTS_FIELD            = "contents";
   
+  private IndexTaskRunner indexRunner = new IndexTaskRunner();
+
+  
   public CoreIndexer(Set<Slot> searchableSlots, 
                      NarrowFrameStore delegate, 
                      String path, 
@@ -67,6 +73,11 @@ public abstract class CoreIndexer {
     this.indexPath  = path;
     analyzer = createAnalyzer();
     nameSlot = (Slot) delegate.getFrame(Model.SlotID.NAME);
+    indexRunner.startBackgroundThread();
+  }
+  
+  public void dispose() {
+      indexRunner.dispose();
   }
   
   public void setOWLMode(boolean owlMode) {
@@ -85,49 +96,61 @@ public abstract class CoreIndexer {
   
   @SuppressWarnings("unchecked")
   public void indexOntologies() throws ProtegeException {
-    boolean errorsFound = false;
-    long start = System.currentTimeMillis();
-    Log.getLogger().info("Started indexing ontology with " + searchableSlots.size() + " searchable slots");
-    IndexWriter myWriter = null;
-    try {
-      myWriter = openWriter(true);
-      Set<Frame> frames;
-      synchronized (kbLock) {
-        frames = delegate.getFrames();
-      }
-      for (Frame frame : frames) {
-        for (Slot slot : searchableSlots) {
-          try {
-            List values;
-            synchronized (kbLock) {
-              values = delegate.getValues(frame, slot, null, false);
-            }
-            for (Object value : values) {
-              if (!(value instanceof String)) {
-                continue;
+      FutureTask indexTask = new FutureTask() {
+          public void run() {
+              boolean errorsFound = false;
+              long start = System.currentTimeMillis();
+              Log.getLogger().info("Started indexing ontology with " + searchableSlots.size() + " searchable slots");
+              IndexWriter myWriter = null;
+              try {
+                  myWriter = openWriter(true);
+                  Set<Frame> frames;
+                  synchronized (kbLock) {
+                      frames = delegate.getFrames();
+                  }
+                  for (Frame frame : frames) {
+                      for (Slot slot : searchableSlots) {
+                          try {
+                              List values;
+                              synchronized (kbLock) {
+                                  values = delegate.getValues(frame, slot, null, false);
+                              }
+                              for (Object value : values) {
+                                  if (!(value instanceof String)) {
+                                      continue;
+                                  }
+                                  addUpdate(myWriter, frame, slot, (String) value);
+                              }
+                          } catch (Exception e) {
+                              Log.getLogger().log(Level.WARNING, "Exception caught indexing ontologies", e);
+                              Log.getLogger().warning("continuing...");
+                              errorsFound = true;
+                          }
+                      }
+                  }
+                  myWriter.optimize();
+                  status = Status.READY;
+                  Log.getLogger().info("Finished indexing ontology (" 
+                                       + ((System.currentTimeMillis() - start)/1000) + " seconds)");
+              } catch (IOException ioe) {
+                  died(ioe);
+                  errorsFound = true;
+              } finally {
+                  forceClose(myWriter);
               }
-              addUpdate(myWriter, frame, slot, (String) value);
-            }
-          } catch (Exception e) {
-            Log.getLogger().log(Level.WARNING, "Exception caught indexing ontologies", e);
-            Log.getLogger().warning("continuing...");
-            errorsFound = true;
+              if (errorsFound) {  // ToDo - do this *much* better
+                  throw new ProtegeException("Errors Found - see console log for details");
+              }
           }
-        }
+      };
+      indexRunner.addTask(indexTask);
+      try {
+          indexTask.get();
+      } catch (ExecutionException ee) {
+          throw new RuntimeException(ee);
+      } catch (InterruptedException interrupt) {
+          throw new RuntimeException(interrupt);
       }
-      myWriter.optimize();
-      status = Status.READY;
-      Log.getLogger().info("Finished indexing ontology (" 
-                           + ((System.currentTimeMillis() - start)/1000) + " seconds)");
-    } catch (IOException ioe) {
-      died(ioe);
-      errorsFound = true;
-    } finally {
-      forceClose(myWriter);
-    }
-    if (errorsFound) {  // ToDo - do this *much* better
-      throw new ProtegeException("Errors Found - see console log for details");
-    }
   }
   
   protected void addUpdate(IndexWriter writer, Frame frame, Slot slot, String value) throws IOException {
@@ -146,27 +169,47 @@ public abstract class CoreIndexer {
     writer.addDocument(doc);
   }
 
-  public Set<Frame> executeQuery(Slot slot, String expr) throws IOException {
-    if (status == Status.DOWN) {
-      return null;
-    }
-    Searcher searcher = null;
-    Set<Frame> results = new HashSet<Frame>();
-    try {
-      Query luceneQuery = generateLuceneQuery(slot, expr);
-      searcher = new IndexSearcher(getIndexPath());
-      Hits hits = searcher.search(luceneQuery);
-      for (int i = 0; i < hits.length(); i++) {
-        Document doc = hits.doc(i);
-        String frameName = doc.get(FRAME_NAME);
-        synchronized (kbLock) {
-          results.add(getFrameByName(frameName));
-        }
+  public Set<Frame> executeQuery(final Slot slot, final String expr) throws IOException {
+      FutureTask<Set<Frame>> queryTask = new FutureTask<Set<Frame>>() {
+          public void run() {
+              if (status == Status.DOWN) {
+                  set(null);
+              }
+              Searcher searcher = null;
+              Set<Frame> results = new HashSet<Frame>();
+              try {
+                  Query luceneQuery = generateLuceneQuery(slot, expr);
+                  searcher = new IndexSearcher(getIndexPath());
+                  Hits hits = searcher.search(luceneQuery);
+                  for (int i = 0; i < hits.length(); i++) {
+                      Document doc = hits.doc(i);
+                      String frameName = doc.get(FRAME_NAME);
+                      synchronized (kbLock) {
+                          results.add(getFrameByName(frameName));
+                      }
+                  }
+              } catch (IOException ioe) {
+                  setException(ioe);
+              } finally {
+                  forceClose(searcher);
+              }
+              set(results);
+          }
+      };
+
+      try {
+          return queryTask.get();
+      } catch (InterruptedException e) {
+          throw new RuntimeException(e);
+      } catch (ExecutionException e) {
+          Throwable cause = e.getCause();
+          if (cause != null && cause instanceof IOException) {
+              throw (IOException) cause;
+          }
+          else {
+              throw new RuntimeException(e);
+          }
       }
-    } finally {
-      forceClose(searcher);
-    }
-    return results;
   }
   
   protected Query generateLuceneQuery(Slot slot, String expr) throws IOException {
@@ -262,98 +305,114 @@ public abstract class CoreIndexer {
    * Update Utilities for the Narrow Frame Store
    */
   
-  public void addValues(Frame frame, Slot slot, Collection values) { 
-    if (status == Status.DOWN || !searchableSlots.contains(slot) || isAnonymous(frame)) {
-      return;
-    }
-    IndexWriter writer = null;
-    try {
-      long start = System.currentTimeMillis();
-      writer = openWriter(false);
-      for (Object value : values) {
-        if (value instanceof String) {
-          addUpdate(writer, frame, slot, (String) value);
-        }
-      }
-      writer.optimize();
-      if (log.isLoggable(Level.FINE)) {
-        log.fine("updated " + values.size() + " values in " + (System.currentTimeMillis() - start) + "ms");
-      }
-    } catch (IOException ioe) {
-      died(ioe);
-    } finally {
-      forceClose(writer);
-    }
+  public void addValues(final Frame frame, final Slot slot, final Collection values) { 
+      indexRunner.addTask(new FutureTask() {
+          public void run() {
+              if (status == Status.DOWN || !searchableSlots.contains(slot) || isAnonymous(frame)) {
+                  return;
+              }
+              IndexWriter writer = null;
+              try {
+                  long start = System.currentTimeMillis();
+                  writer = openWriter(false);
+                  for (Object value : values) {
+                      if (value instanceof String) {
+                          addUpdate(writer, frame, slot, (String) value);
+                      }
+                  }
+                  writer.optimize();
+                  if (log.isLoggable(Level.FINE)) {
+                      log.fine("updated " + values.size() + " values in " + (System.currentTimeMillis() - start) + "ms");
+                  }
+              } catch (IOException ioe) {
+                  died(ioe);
+              } finally {
+                  forceClose(writer);
+              }
+          }
+      });
   }
   
-  public void removeValue(Frame frame, Slot slot, Object value) {
-    if (status == Status.DOWN || !searchableSlots.contains(slot) || !(value instanceof String)) {
-      return;
-    }
-    IndexSearcher searcher = null;
-    try {
-      long start = System.currentTimeMillis();
-      searcher = new IndexSearcher(getIndexPath());
-      Hits hits = searcher.search(generateLuceneQuery(frame, slot));
-      for (int i = 0; i < hits.length(); i++) {
-        Document doc = hits.doc(i);
-        if (doc.get(CONTENTS_FIELD).equals(value)) {
-          searcher.getIndexReader().deleteDocument(hits.id(i));
-          break;
-        }
-      }
-      if (log.isLoggable(Level.FINE)) {
-        log.fine("remove value operation took " + (System.currentTimeMillis() - start) + "ms");
-      }
-    } catch (IOException ioe) {
-      died(ioe);
-    } finally {
-      forceClose(searcher);
-    }
+  public void removeValue(final Frame frame, final Slot slot, final Object value) {
+      indexRunner.addTask(new FutureTask() {
+          public void run() {
+              if (status == Status.DOWN || !searchableSlots.contains(slot) || !(value instanceof String)) {
+                  return;
+              }
+              IndexSearcher searcher = null;
+              try {
+                  long start = System.currentTimeMillis();
+                  searcher = new IndexSearcher(getIndexPath());
+                  Hits hits = searcher.search(generateLuceneQuery(frame, slot));
+                  for (int i = 0; i < hits.length(); i++) {
+                      Document doc = hits.doc(i);
+                      if (doc.get(CONTENTS_FIELD).equals(value)) {
+                          searcher.getIndexReader().deleteDocument(hits.id(i));
+                          break;
+                      }
+                  }
+                  if (log.isLoggable(Level.FINE)) {
+                      log.fine("remove value operation took " + (System.currentTimeMillis() - start) + "ms");
+                  }
+              } catch (IOException ioe) {
+                  died(ioe);
+              } finally {
+                  forceClose(searcher);
+              }
+          }
+      });
   }
   
-  public void removeValues(Frame frame, Slot slot) {
-    if (status == Status.DOWN || !searchableSlots.contains(slot)) {
-      return;
-    }
-    IndexSearcher searcher = null;
-    try {
-      long start = System.currentTimeMillis();
-      searcher = new IndexSearcher(getIndexPath());
-      Hits hits = searcher.search(generateLuceneQuery(frame, slot));
-      for (int i = 0; i < hits.length(); i++) {
-        searcher.getIndexReader().deleteDocument(hits.id(i));
-      }
-      if (log.isLoggable(Level.FINE)) {
-        log.fine("remove values operation took " + (System.currentTimeMillis() - start) + "ms");
-      }
-    } catch (IOException ioe) {
-      died(ioe);
-    } finally {
-      forceClose(searcher);
-    }
+  public void removeValues(final Frame frame, final Slot slot) {
+      indexRunner.addTask(new FutureTask() {
+          public void run() {
+              if (status == Status.DOWN || !searchableSlots.contains(slot)) {
+                  return;
+              }
+              IndexSearcher searcher = null;
+              try {
+                  long start = System.currentTimeMillis();
+                  searcher = new IndexSearcher(getIndexPath());
+                  Hits hits = searcher.search(generateLuceneQuery(frame, slot));
+                  for (int i = 0; i < hits.length(); i++) {
+                      searcher.getIndexReader().deleteDocument(hits.id(i));
+                  }
+                  if (log.isLoggable(Level.FINE)) {
+                      log.fine("remove values operation took " + (System.currentTimeMillis() - start) + "ms");
+                  }
+              } catch (IOException ioe) {
+                  died(ioe);
+              } finally {
+                  forceClose(searcher);
+              }
+          }
+      });
   }
   
-  public void removeValues(Frame frame) {
-    if (status == Status.DOWN) {
-      return;
-    }
-    IndexSearcher searcher = null;
-    try {
-      long start = System.currentTimeMillis();
-      searcher = new IndexSearcher(getIndexPath());
-      Hits hits = searcher.search(generateLuceneQuery(frame));
-      for (int i = 0; i < hits.length(); i++) {
-        searcher.getIndexReader().deleteDocument(hits.id(i));
-      }
-      if (log.isLoggable(Level.FINE)) {
-        log.fine("remove values operation took " + (System.currentTimeMillis() - start) + "ms");
-      }
-    } catch (IOException ioe) {
-      died(ioe);
-    } finally {
-      forceClose(searcher);
-    }
+  public void removeValues(final Frame frame) {
+      indexRunner.addTask(new FutureTask() {
+          public void run() {
+              if (status == Status.DOWN) {
+                  return;
+              }
+              IndexSearcher searcher = null;
+              try {
+                  long start = System.currentTimeMillis();
+                  searcher = new IndexSearcher(getIndexPath());
+                  Hits hits = searcher.search(generateLuceneQuery(frame));
+                  for (int i = 0; i < hits.length(); i++) {
+                      searcher.getIndexReader().deleteDocument(hits.id(i));
+                  }
+                  if (log.isLoggable(Level.FINE)) {
+                      log.fine("remove values operation took " + (System.currentTimeMillis() - start) + "ms");
+                  }
+              } catch (IOException ioe) {
+                  died(ioe);
+              } finally {
+                  forceClose(searcher);
+              }
+          }
+      });
   }
 
 }
