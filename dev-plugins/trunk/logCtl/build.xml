@@ -1,0 +1,44 @@
+<?xml version = "1.0" encoding = "utf-8"?>
+<project name = "Developer Plugins" default = "dist" basedir = ".">    
+   <property name = "src" value = "./src"/>  
+   <property name = "classes" value = "./classes"/>  
+   <property name = "plugins" value = "../plugins"/>
+   <property name = "lib" value = "../lib"/>
+   <property name = "plugin_dist" value = "edu.stanford.smi.protege.logCtl"/>
+   <property name = "plugin_name" value = "log_ctl_plugin"/>
+	
+   <path id = "project.classpath">    
+     <pathelement location = "${lib}/protege.jar"/>
+   </path>
+
+   <target name = "init">
+     <mkdir dir = "${classes}"/>
+     <mkdir dir = "${plugins}"/>
+     <mkdir dir = "${plugins}/${plugin_dist}"/>
+   </target>  
+
+
+   <target name = "compile" depends = "init">    
+     <javac srcdir = "${src}" destdir = "${classes}" debug="on">
+       <classpath refid = "project.classpath"/>    
+     </javac>    
+   </target>
+
+   <target name = "jar" depends = "compile">
+     <jar jarfile = "${plugins}/${plugin_dist}/${plugin_name}.jar" 
+          basedir = "${classes}" 
+          manifest = "${src}/META-INF/MANIFEST.MF"/>  
+   </target>
+
+   <target name = "dist" depends = "jar">
+     <zip basedir = "${plugins}"
+          includes = "${plugin_dist}/**"
+          destfile = "${plugins}/${plugin_name}.zip"/>
+   </target>
+
+   <target name = "clean">
+     <delete dir = "${plugins}"/>
+     <delete dir = "${classes}"/>
+   </target>
+
+</project>
