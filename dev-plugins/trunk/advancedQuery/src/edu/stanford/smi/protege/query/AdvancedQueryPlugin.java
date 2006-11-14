@@ -109,9 +109,9 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 		
         // TODO determine default slot, from properties file?
 		this.defaultSlot = kb.getSlot("Preferred_Name");
-        if (defaultSlot == null) {
-        	defaultSlot = kb.getNameSlot();
-        }
+		if (defaultSlot == null) {
+        	    defaultSlot = kb.getNameSlot();
+		}
         
         // add UI components
 		createGUI();
