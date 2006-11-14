@@ -198,6 +198,7 @@ public abstract class CoreIndexer {
       };
 
       try {
+          indexRunner.addTask(queryTask);
           return queryTask.get();
       } catch (InterruptedException e) {
           throw new RuntimeException(e);
