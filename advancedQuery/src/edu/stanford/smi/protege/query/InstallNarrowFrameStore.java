@@ -16,7 +16,7 @@ import edu.stanford.smi.protege.util.Log;
 import edu.stanford.smi.protege.util.ProtegeJob;
 import edu.stanford.smi.protegex.owl.model.OWLModel;
 
-public class InstallNarrowFrameStore extends ProtegeJob {
+public class InstallNarrowFrameStore extends ProtegeJob<LocalizableHashSet<Slot>> {
   private static final long serialVersionUID = 8982683075005704375L;
   
   public final static String PHONETIC_SLOT_PROPERTY = "SearchablePhoneticSlot";
