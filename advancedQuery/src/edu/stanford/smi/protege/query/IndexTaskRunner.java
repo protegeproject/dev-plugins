@@ -2,10 +2,8 @@ package edu.stanford.smi.protege.query;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Level;
 
 import edu.stanford.smi.protege.util.FutureTask;
-import edu.stanford.smi.protege.util.Log;
 
 public class IndexTaskRunner {
     private List<FutureTask> tasks = new ArrayList<FutureTask>();
@@ -20,6 +18,7 @@ public class IndexTaskRunner {
     public void addTask(FutureTask task) {
         synchronized (lock) {
             tasks.add(task);
+            startBackgroundThread();
             lock.notifyAll();
         }
     }
@@ -27,6 +26,7 @@ public class IndexTaskRunner {
     public void addTaskFirst(FutureTask task) {
         synchronized (lock) {
             tasks.add(0, task);
+            startBackgroundThread();
             lock.notifyAll();
         }
     }
@@ -56,47 +56,45 @@ public class IndexTaskRunner {
     }
 
     public void startBackgroundThread() {
-        if (th != null) {
-            return;
-        }
-        th = new Thread(new Runnable() {
-            @SuppressWarnings("unchecked")
-            public void run() {
-                while (true) {
-                    if (th != Thread.currentThread()) return;
-                    FutureTask task;
-                    synchronized (lock) {
-                        while (tasks.isEmpty()) {
+        synchronized (lock) {
+            if (th != null || tasks.isEmpty()) {
+                return;
+            }
+            th = new Thread(new Runnable() {
+                @SuppressWarnings("unchecked")
+                public void run() {
+                    while (true) {
+                        FutureTask task;
+                        synchronized (lock) {
+                            if (tasks.isEmpty()) {
+                                th = null;
+                                return;
+                            }
+                            task = tasks.remove(0);
+                        }
+                        if (task.preRun()) {
                             try {
-                                lock.wait();
-                            } catch (InterruptedException e) {
-                                Log.getLogger().log(Level.WARNING, "Unexpected Interrupt", e);
+                                task.run();
+                            } catch (Throwable t) {
+                                task.setException(t);
+                            } finally {
+                                if (!task.isDone()) {
+                                    task.set(null);
+                                }
                             }
                         }
-                        task = tasks.remove(0);
-                    }
-                    if (task.preRun()) {
-                        try {
-                            task.run();
-                        } catch (Throwable t) {
-                            task.setException(t);
-                        } finally {
-                            if (!task.isDone()) {
-                                task.set(null);
-                            }
+                        boolean finishUp;
+                        synchronized (lock) {
+                            finishUp = tasks.isEmpty() && cleanUpTask != null;
                         }
-                    }
-                    boolean finishUp;
-                    synchronized (lock) {
-                        finishUp = tasks.isEmpty() && cleanUpTask != null;
-                    }
-                    if (finishUp) {
-                        cleanUpTask.run();
-                        cleanUpTask = null;
+                        if (finishUp) {
+                            cleanUpTask.run();
+                            cleanUpTask = null;
+                        }
                     }
                 }
-            }
-        }, "Lucene Reindexing thread");
+            }, "Lucene Reindexing thread");
+        }
         th.start();
     }
 }
