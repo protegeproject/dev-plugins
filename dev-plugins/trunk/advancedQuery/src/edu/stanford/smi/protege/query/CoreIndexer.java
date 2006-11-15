@@ -301,6 +301,20 @@ public abstract class CoreIndexer {
     return name.startsWith("@");
   }
   
+  private void installOptimizeTask() {
+      indexRunner.setCleanUpTask(new Runnable() {
+          public void run() {
+              try {
+                  IndexWriter myWriter = openWriter(false);
+                  myWriter.optimize();
+                  myWriter.close();
+              } catch (Exception e) {
+                  log.info("Could not optimize the lucene index - " + e);
+              }
+          }
+      });
+  }
+  
   
   /* --------------------------------------------------------------------------
    * Update Utilities for the Narrow Frame Store
@@ -332,6 +346,7 @@ public abstract class CoreIndexer {
               }
           }
       });
+      installOptimizeTask();
   }
   
   public void removeValue(final Frame frame, final Slot slot, final Object value) {
@@ -362,6 +377,7 @@ public abstract class CoreIndexer {
               }
           }
       });
+      installOptimizeTask();
   }
   
   public void removeValues(final Frame frame, final Slot slot) {
@@ -388,6 +404,7 @@ public abstract class CoreIndexer {
               }
           }
       });
+      installOptimizeTask();
   }
   
   public void removeValues(final Frame frame) {
@@ -414,6 +431,7 @@ public abstract class CoreIndexer {
               }
           }
       });
+      installOptimizeTask();
   }
 
 }
