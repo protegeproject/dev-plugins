@@ -5,6 +5,14 @@
      <ant dir="./advancedQuery" target="dist"/>
    </target>
 
+   <target name="frameIDBrowserSlot">
+     <ant dir="./frameIDBrowserSlot" target="dist"/>
+   </target>
+
+   <target name="logCtl">
+      <ant dir="./logCtl" target = "dist"/>
+   </target>
+
    <target name="serverStats">
      <ant dir="./serverStats" target="dist"/>
    </target>
@@ -13,9 +21,7 @@
      <ant dir="./transaction" target="dist"/>
    </target>
 
-   <target name="frameIDBrowserSlot">
-     <ant dir="./frameIDBrowserSlot" target="dist"/>
-   </target>
+
 
 
    <target name="all" depends="advancedQuery,serverStats,transaction,frameIDBrowserSlot"/>
