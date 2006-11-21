@@ -19,6 +19,7 @@ import edu.stanford.smi.protege.model.Facet;
 import edu.stanford.smi.protege.model.Frame;
 import edu.stanford.smi.protege.model.FrameID;
 import edu.stanford.smi.protege.model.KnowledgeBase;
+import edu.stanford.smi.protege.model.Model;
 import edu.stanford.smi.protege.model.Reference;
 import edu.stanford.smi.protege.model.Slot;
 import edu.stanford.smi.protege.model.framestore.NarrowFrameStore;
@@ -44,9 +45,9 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
   private NarrowFrameStore delegate;
   private String name;
 
-  private boolean useStdLucene  = false;
-  private StdIndexer      stdIndexer;
   private PhoneticIndexer phoneticIndexer;
+  
+  private Slot nameSlot;
   
   private boolean indexingInProgress = false;
   
@@ -59,17 +60,12 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
       log.fine("Constructing QueryNarrowFrameStore");
     }
     this.delegate = delegate;
+    nameSlot = (Slot) delegate.getFrame(Model.SlotID.NAME);
     String path = ApplicationProperties.getApplicationDirectory().getAbsolutePath()
                     + File.separator + "lucene" + File.separator  + name;
     phoneticIndexer = new PhoneticIndexer(searchableSlots, delegate, path + File.separator + "phonetic", kb);
-    if (useStdLucene) {
-      stdIndexer = new StdIndexer(searchableSlots, delegate,      path + File.separator + "standard", kb);
-    }
     if (kb instanceof OWLModel) {
       phoneticIndexer.setOWLMode(true);
-      if (useStdLucene) {
-        stdIndexer.setOWLMode(true);
-      }
     }
     this.kbLock = kb;
   }
@@ -80,9 +76,6 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
     }
     try {
       phoneticIndexer.indexOntologies();
-      if (useStdLucene) {
-        stdIndexer.indexOntologies();
-      }
     } finally {
       synchronized (kbLock) {
         indexingInProgress = false;
@@ -97,6 +90,14 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
       }
     }
   }
+  
+  private String getFrameName(Frame frame) {
+      Collection values = delegate.getValues(frame, nameSlot, null, false);
+      if (values == null || values.isEmpty()) {
+        return null;
+      }
+      return (String) values.iterator().next();
+    }
   
 
   /*---------------------------------------------------------------------
@@ -172,37 +173,28 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
   }
   
   public Set<Frame> executeQuery(OwnSlotValueQuery query) throws ProtegeIOException {
-    if  (useStdLucene) {
-      try {
-        return stdIndexer.executeQuery(query);
-      } catch (IOException ioe) {
-        Log.getLogger().log(Level.WARNING, "Search failed", ioe);
-        throw new ProtegeIOException(ioe);
-      } 
-    } else {
-      String searchString = query.getExpr();
-      if (searchString.startsWith("*")) {
-        return delegate.getMatchingFrames(query.getSlot(), null, false, searchString, -1);
-      }
-      else {
-        SimpleStringMatcher matcher = new SimpleStringMatcher(searchString);
-        Set<Frame> frames = delegate.getMatchingFrames(query.getSlot(), null, false, 
-                                                       "*" + searchString, -1);
-        Set<Frame> results = new HashSet<Frame>();
-        for (Frame frame : frames)  {
-          boolean found = false;
-          for (Object o : delegate.getValues(frame, query.getSlot(), null, false)) {
-            if (o instanceof String && matcher.isMatch((String) o)) {
-              found = true;
-              break;
-            }
-          }
-          if (found) {
-            results.add(frame);
+    String searchString = query.getExpr();
+    if (searchString.startsWith("*")) {
+      return delegate.getMatchingFrames(query.getSlot(), null, false, searchString, -1);
+    }
+    else {
+      SimpleStringMatcher matcher = new SimpleStringMatcher(searchString);
+      Set<Frame> frames = delegate.getMatchingFrames(query.getSlot(), null, false, 
+                                                     "*" + searchString, -1);
+      Set<Frame> results = new HashSet<Frame>();
+      for (Frame frame : frames)  {
+        boolean found = false;
+        for (Object o : delegate.getValues(frame, query.getSlot(), null, false)) {
+          if (o instanceof String && matcher.isMatch((String) o)) {
+            found = true;
+            break;
           }
         }
-        return results;
+        if (found) {
+          results.add(frame);
+        }
       }
+      return results;
     }
   }
   
@@ -297,9 +289,6 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
     delegate.addValues(frame, slot, facet, isTemplate, values);
     if (facet == null && !isTemplate) {
       phoneticIndexer.addValues(frame, slot, values);
-      if (useStdLucene) {
-        stdIndexer.addValues(frame, slot, values);
-      }
     }
   }
 
@@ -318,9 +307,6 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
     delegate.removeValue(frame, slot, facet, isTemplate, value);
     if (facet == null && !isTemplate) {
       phoneticIndexer.removeValue(frame, slot, value);
-      if (useStdLucene) {
-        stdIndexer.removeValue(frame, slot, value);
-      }
     }
   }
 
@@ -334,10 +320,6 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
     if (facet == null && !isTemplate) {
       phoneticIndexer.removeValues(frame, slot);
       phoneticIndexer.addValues(frame, slot, values);
-      if (useStdLucene) {
-        stdIndexer.removeValues(frame, slot);
-        stdIndexer.addValues(frame, slot, values);
-      }
     }
   }
 
@@ -370,11 +352,9 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
     if (log.isLoggable(Level.FINE)) {
       log.fine("deleteFrame ");
     }
+    String fname = getFrameName(frame);
     delegate.deleteFrame(frame);
-    phoneticIndexer.removeValues(frame);
-    if (useStdLucene) {
-      stdIndexer.removeValues(frame);
-    }
+    phoneticIndexer.removeValues(fname);
   }
 
   public void close() {
