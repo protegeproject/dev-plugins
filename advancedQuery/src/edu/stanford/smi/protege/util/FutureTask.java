@@ -16,14 +16,14 @@ import java.util.concurrent.TimeoutException;
  * @author tredmond
  *
  */
-public abstract class FutureTask<X> implements Future<X>, Runnable {
+public abstract class FutureTask implements Future, Runnable {
     
     private enum State {
         IDLE, RUNNING, CANCELLED_RUNNING, CANCELLED, ERROR, SUCCESS
     }
     private State state = State.IDLE;
     
-    private X result;
+    private Object result;
     private Throwable t;
 
     /**
@@ -74,7 +74,7 @@ public abstract class FutureTask<X> implements Future<X>, Runnable {
      * @throws ExecutionException if the task threw an exception when
      * it executed.
      */
-    public X get() throws InterruptedException, ExecutionException {
+    public Object get() throws InterruptedException, ExecutionException {
         try {
             return get(0, TimeUnit.MILLISECONDS);
         } catch (TimeoutException te) {
@@ -103,7 +103,7 @@ public abstract class FutureTask<X> implements Future<X>, Runnable {
      *
      * @throws TimeoutException if the task does not complete in time.
      */
-    public synchronized X get(long waitInterval, TimeUnit tu) 
+    public synchronized Object get(long waitInterval, TimeUnit tu) 
                             throws InterruptedException, ExecutionException, 
                                    TimeoutException {
         if (waitInterval == 0) {
@@ -161,7 +161,7 @@ public abstract class FutureTask<X> implements Future<X>, Runnable {
      * 
      * @param result the result of the computation.
      */
-    public synchronized void set(X result) {
+    public synchronized void set(Object result) {
         this.result = result;
         state = State.SUCCESS;
         this.notifyAll();
