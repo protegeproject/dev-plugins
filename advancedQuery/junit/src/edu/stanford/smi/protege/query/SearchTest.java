@@ -86,6 +86,7 @@ public class SearchTest extends TestCase {
       log.fine("delete phonetic search test");
     }
     OWLModel om = getOWLModel();
+    checkPhoneticSearch(om, om.getRDFProperty("rdfs:comment"), "A class to demonstrate mistakes made", "IceCream", true);
     om.getOWLNamedClass("IceCream").delete();
     checkPhoneticSearch(om, om.getRDFProperty("rdfs:comment"), "A class to demonstrate mistakes made", "IceCream", false);
   }
