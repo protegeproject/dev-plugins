@@ -10,8 +10,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import javax.net.ssl.SSLEngineResult.Status;
-
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.Token;
 import org.apache.lucene.analysis.TokenStream;
@@ -170,7 +168,7 @@ public abstract class CoreIndexer {
   }
 
   public Set<Frame> executeQuery(final Slot slot, final String expr) throws IOException {
-      FutureTask<Set<Frame>> queryTask = new FutureTask<Set<Frame>>() {
+      FutureTask queryTask = new FutureTask() {
           public void run() {
               if (status == Status.DOWN) {
                   set(null);
@@ -199,7 +197,7 @@ public abstract class CoreIndexer {
 
       try {
           indexRunner.addTask(queryTask);
-          return queryTask.get();
+          return (Set<Frame>) queryTask.get();
       } catch (InterruptedException e) {
           throw new RuntimeException(e);
       } catch (ExecutionException e) {
