@@ -107,24 +107,7 @@ public abstract class CoreIndexer {
                       frames = delegate.getFrames();
                   }
                   for (Frame frame : frames) {
-                      for (Slot slot : searchableSlots) {
-                          try {
-                              List values;
-                              synchronized (kbLock) {
-                                  values = delegate.getValues(frame, slot, null, false);
-                              }
-                              for (Object value : values) {
-                                  if (!(value instanceof String)) {
-                                      continue;
-                                  }
-                                  addUpdate(myWriter, frame, slot, (String) value);
-                              }
-                          } catch (Exception e) {
-                              Log.getLogger().log(Level.WARNING, "Exception caught indexing ontologies", e);
-                              Log.getLogger().warning("continuing...");
-                              errorsFound = true;
-                          }
-                      }
+                    errorsFound = errorsFound || !addFrame(myWriter, frame);
                   }
                   myWriter.optimize();
                   status = Status.READY;
@@ -151,6 +134,29 @@ public abstract class CoreIndexer {
       }
   }
   
+  private boolean addFrame(IndexWriter writer, Frame frame) {
+      boolean errorsFound = false;
+      for (Slot slot : searchableSlots) {
+          try {
+              List values;
+              synchronized (kbLock) {
+                  values = delegate.getValues(frame, slot, null, false);
+              }
+              for (Object value : values) {
+                  if (!(value instanceof String)) {
+                      continue;
+                  }
+                  addUpdate(writer, frame, slot, (String) value);
+              }
+          } catch (Exception e) {
+              Log.getLogger().log(Level.WARNING, "Exception caught indexing ontologies", e);
+              Log.getLogger().warning("continuing...");
+              errorsFound = true;
+          }
+      }
+      return !errorsFound;
+  }
+  
   protected void addUpdate(IndexWriter writer, Frame frame, Slot slot, String value) throws IOException {
     if (owlMode && value.startsWith("~#")) {
       value = value.substring(5);
@@ -167,6 +173,7 @@ public abstract class CoreIndexer {
     writer.addDocument(doc);
   }
 
+  @SuppressWarnings("unchecked")
   public Set<Frame> executeQuery(final Slot slot, final String expr) throws IOException {
       FutureTask queryTask = new FutureTask() {
           public void run() {
@@ -226,11 +233,11 @@ public abstract class CoreIndexer {
     return query;
   }
   
-  protected Query generateLuceneQuery(Frame frame) throws IOException {
+  protected Query generateLuceneQuery(String fname) throws IOException {
     BooleanQuery query  = new  BooleanQuery();
     
     Term term;
-    term = new Term(FRAME_NAME, getFrameName(frame));
+    term = new Term(FRAME_NAME, fname);
     query.add(new TermQuery(term), BooleanClause.Occur.MUST);
     
     return query;
@@ -328,17 +335,22 @@ public abstract class CoreIndexer {
               try {
                   long start = System.currentTimeMillis();
                   writer = openWriter(false);
+                  if (slot.equals(nameSlot)) {
+                      addFrame(writer, frame);
+                      return;
+                  }
                   for (Object value : values) {
                       if (value instanceof String) {
                           addUpdate(writer, frame, slot, (String) value);
                       }
                   }
-                  writer.optimize();
                   if (log.isLoggable(Level.FINE)) {
                       log.fine("updated " + values.size() + " values in " + (System.currentTimeMillis() - start) + "ms");
                   }
               } catch (IOException ioe) {
                   died(ioe);
+              } catch (Throwable t) {
+                  Log.getLogger().warning("Error during indexing" + t);
               } finally {
                   forceClose(writer);
               }
@@ -370,6 +382,8 @@ public abstract class CoreIndexer {
                   }
               } catch (IOException ioe) {
                   died(ioe);
+              } catch (Throwable t) {
+                  Log.getLogger().warning("Exception caught during indexing" + t);
               } finally {
                   forceClose(searcher);
               }
@@ -388,7 +402,14 @@ public abstract class CoreIndexer {
               try {
                   long start = System.currentTimeMillis();
                   searcher = new IndexSearcher(getIndexPath());
-                  Hits hits = searcher.search(generateLuceneQuery(frame, slot));
+                  Hits hits;
+                  if (slot.equals(nameSlot)) {
+                      String fname = getFrameName(frame);
+                      hits = searcher.search(generateLuceneQuery(fname));
+                  }
+                  else {
+                      hits = searcher.search(generateLuceneQuery(frame, slot));
+                  }
                   for (int i = 0; i < hits.length(); i++) {
                       searcher.getIndexReader().deleteDocument(hits.id(i));
                   }
@@ -397,6 +418,8 @@ public abstract class CoreIndexer {
                   }
               } catch (IOException ioe) {
                   died(ioe);
+              } catch (Throwable t) {
+                  Log.getLogger().warning("Exception caught during indexing " + t);
               } finally {
                   forceClose(searcher);
               }
@@ -405,7 +428,7 @@ public abstract class CoreIndexer {
       installOptimizeTask();
   }
   
-  public void removeValues(final Frame frame) {
+  public void removeValues(final String fname) {
       indexRunner.addTask(new FutureTask() {
           public void run() {
               if (status == Status.DOWN) {
@@ -415,7 +438,7 @@ public abstract class CoreIndexer {
               try {
                   long start = System.currentTimeMillis();
                   searcher = new IndexSearcher(getIndexPath());
-                  Hits hits = searcher.search(generateLuceneQuery(frame));
+                  Hits hits = searcher.search(generateLuceneQuery(fname));
                   for (int i = 0; i < hits.length(); i++) {
                       searcher.getIndexReader().deleteDocument(hits.id(i));
                   }
@@ -424,6 +447,8 @@ public abstract class CoreIndexer {
                   }
               } catch (IOException ioe) {
                   died(ioe);
+              } catch (Throwable t) {
+                  Log.getLogger().warning("Exception caught during indexing " + t);
               } finally {
                   forceClose(searcher);
               }
