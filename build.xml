@@ -24,13 +24,14 @@
 
 
 
-   <target name="all" depends="advancedQuery,serverStats,transaction,frameIDBrowserSlot"/>
+   <target name="all" depends="advancedQuery,frameIDBrowserSlot, logCtl,serverStats,transaction"/>
 
    <target name="clean">
      <ant dir="./advancedQuery" target="clean"/>
+     <ant dir="./frameIDBrowserSlot" target="clean"/>
+     <ant dir="./logCtl" target="clean"/>
      <ant dir="./serverStats" target="clean"/> 
      <ant dir="./transaction" target="clean"/>
-     <ant dir="./frameIDBrowserSlot" target="clean"/>
    </target>
 
 </project>
