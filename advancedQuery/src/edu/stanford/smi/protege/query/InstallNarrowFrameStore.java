@@ -88,7 +88,7 @@ public class InstallNarrowFrameStore extends ProtegeJob {
   private void addUserSpecifiedSlots(Set<Slot> slots) {
     KnowledgeBase kb = getKnowledgeBase();
     for (int i = 0; true ; i++) {
-      String userSlot = ApplicationProperties.getString(PHONETIC_SLOT_PROPERTY + i);
+      String userSlot = ApplicationProperties.getApplicationOrSystemProperty(PHONETIC_SLOT_PROPERTY + i);
       if (userSlot == null) {
         return;
       }
