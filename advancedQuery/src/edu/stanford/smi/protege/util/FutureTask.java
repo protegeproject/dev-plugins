@@ -5,6 +5,12 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+/*
+ * I have had trouble with generics in a context very similar to this one
+ * (see the comment at the top of Protege job).  I think that they should be
+ * ok but I don't want to take the risk.
+ */
+
 /**
  * I should probaby use the java.util.concurrent.FutureTask here but
  * it is not well documented so it is not clear what to do.  I will
