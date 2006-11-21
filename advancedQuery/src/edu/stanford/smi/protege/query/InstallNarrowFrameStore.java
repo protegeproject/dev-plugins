@@ -16,7 +16,7 @@ import edu.stanford.smi.protege.util.Log;
 import edu.stanford.smi.protege.util.ProtegeJob;
 import edu.stanford.smi.protegex.owl.model.OWLModel;
 
-public class InstallNarrowFrameStore extends ProtegeJob<LocalizableHashSet<Slot>> {
+public class InstallNarrowFrameStore extends ProtegeJob {
   private static final long serialVersionUID = 8982683075005704375L;
   
   public final static String PHONETIC_SLOT_PROPERTY = "SearchablePhoneticSlot";
@@ -31,7 +31,7 @@ public class InstallNarrowFrameStore extends ProtegeJob<LocalizableHashSet<Slot>
   }
 
   @Override
-  public LocalizableHashSet<Slot> run() throws ProtegeException {
+  public Object run() throws ProtegeException {
     DefaultKnowledgeBase kb = (DefaultKnowledgeBase) getKnowledgeBase();
     SimpleFrameStore fs = (SimpleFrameStore) kb.getTerminalFrameStore();
     NarrowFrameStore nfs = fs.getHelper();
