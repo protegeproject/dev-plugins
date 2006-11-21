@@ -12,7 +12,7 @@ import edu.stanford.smi.protege.model.framestore.SimpleFrameStore;
 import edu.stanford.smi.protege.util.Log;
 import edu.stanford.smi.protege.util.ProtegeJob;
 
-public class IndexOntologies extends ProtegeJob<Boolean> {
+public class IndexOntologies extends ProtegeJob {
   private static final long serialVersionUID = -7233685687549750920L;
   
   private static Logger log = Log.getLogger(IndexOntologies.class);
@@ -22,7 +22,7 @@ public class IndexOntologies extends ProtegeJob<Boolean> {
   }
 
   @Override
-  public Boolean run() throws ProtegeException {
+  public Object run() throws ProtegeException {
     FrameStore fs = ((DefaultKnowledgeBase) getKnowledgeBase()).getTerminalFrameStore();
     NarrowFrameStore nfs = ((SimpleFrameStore) fs).getHelper();
     do {
