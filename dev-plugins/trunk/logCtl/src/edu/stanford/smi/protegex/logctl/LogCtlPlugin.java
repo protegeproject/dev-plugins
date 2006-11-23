@@ -16,12 +16,15 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 // protege
+import edu.stanford.smi.protege.exception.ProtegeException;
 import edu.stanford.smi.protege.util.ComponentUtilities;
+import edu.stanford.smi.protege.util.ProtegeJob;
 import edu.stanford.smi.protege.widget.AbstractTabWidget;
 
 public class LogCtlPlugin extends AbstractTabWidget {
 	private JButton getButton;
 	private JButton putButton;
+    private JCheckBox serverSide;
 	private JComboBox levelDropDown;
 	private JLabel classLabel;
 	private JLabel levelLabel;
@@ -81,6 +84,10 @@ public class LogCtlPlugin extends AbstractTabWidget {
 		initButtons();
 		buttonsPanel.add(getButton);
 		buttonsPanel.add(putButton);
+        if (getProject().isMultiUserClient()) {
+            serverSide = new JCheckBox("Server side logging");
+            buttonsPanel.add(serverSide);
+        }
 		c.gridy = 2;
 		mainPanel.add(buttonsPanel, c);
 
@@ -104,18 +111,33 @@ public class LogCtlPlugin extends AbstractTabWidget {
 		getButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
 				String location = locationField.getText();
-			  	Logger log = Logger.getLogger(location);
-			  	levelDropDown.setSelectedItem(log.getLevel());
+				Level level = null;
+				if (getProject().isMultiUserClient() && serverSide.isSelected()) {
+				    LocalizableLevel localizableLevel 
+                        = (LocalizableLevel) new GetLevelJob(getKnowledgeBase(), location).execute();
+                    level = localizableLevel.getLevel();
+				}
+				else {
+				    Logger log = Logger.getLogger(location);
+				    level = log.getLevel();
+				}
+				levelDropDown.setSelectedItem(level);
 		  	}
 	  	});
 
 		putButton = new JButton("Set Level");
 		putButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent event) {
-				String location = locationField.getText();
-				Level level = (Level) levelDropDown.getSelectedItem();
-				Logger log = Logger.getLogger(location);
-				log.setLevel(level);
+                String location = locationField.getText();
+                Level level = (Level) levelDropDown.getSelectedItem();
+                
+                if (getProject().isMultiUserClient() && serverSide.isSelected()) {
+                    new SetLevelJob(getKnowledgeBase(), location, level).execute();
+                }
+                else {
+                    Logger log = Logger.getLogger(location);
+                    log.setLevel(level);
+                }
 			}
 		});
 	}
