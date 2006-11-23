@@ -2,6 +2,7 @@ package edu.stanford.smi.protege.query;
 
 import java.io.IOException;
 import java.io.StringReader;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -15,6 +16,7 @@ import org.apache.lucene.analysis.Token;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
+import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.BooleanClause;
@@ -57,6 +59,7 @@ public abstract class CoreIndexer {
   private static final String FRAME_NAME                = "frameName";
   private static final String SLOT_NAME                 = "slotName";
   private static final String CONTENTS_FIELD            = "contents";
+  private static final String LITERAL_CONTENTS          = "literalContents";
   
   private IndexTaskRunner indexRunner = new IndexTaskRunner();
 
@@ -170,6 +173,7 @@ public abstract class CoreIndexer {
     doc.add(new Field(SLOT_NAME, getFrameName(slot),
                       Field.Store.YES, Field.Index.UN_TOKENIZED));
     doc.add(new Field(CONTENTS_FIELD, value, Field.Store.YES, Field.Index.TOKENIZED));
+    doc.add(new Field(LITERAL_CONTENTS, value, Field.Store.YES, Field.Index.UN_TOKENIZED));
     writer.addDocument(doc);
   }
 
@@ -233,6 +237,20 @@ public abstract class CoreIndexer {
     return query;
   }
   
+  protected Query generateLuceneQuery(Frame frame, Slot slot, String literalValue) throws IOException {
+      BooleanQuery query = new  BooleanQuery();
+      
+      Term term = new Term(LITERAL_CONTENTS, literalValue);
+      query.add(new TermQuery(term), BooleanClause.Occur.MUST);
+      
+      term = new Term(FRAME_NAME, getFrameName(frame));
+      query.add(new TermQuery(term), BooleanClause.Occur.MUST);
+
+      term = new Term(SLOT_NAME, getFrameName(slot));
+      query.add(new TermQuery(term), BooleanClause.Occur.MUST);
+      return query;
+    }
+  
   protected Query generateLuceneQuery(String fname) throws IOException {
     BooleanQuery query  = new  BooleanQuery();
     
@@ -269,6 +287,16 @@ public abstract class CoreIndexer {
     } catch (IOException ioe) {
       Log.getLogger().log(Level.WARNING, "Exception caught closing files involved during search", ioe);
     }
+  }
+  
+  private void forceClose(IndexReader reader) {
+      try {
+          if (reader != null) {
+              reader.close();
+          }
+      } catch (IOException ioe) {
+          Log.getLogger().log(Level.WARNING, "Exception caught reading/deleting documents from index", ioe);
+      }
   }
   
   private void forceClose(IndexWriter writer) {
@@ -309,15 +337,48 @@ public abstract class CoreIndexer {
   private void installOptimizeTask() {
       indexRunner.setCleanUpTask(new Runnable() {
           public void run() {
+              IndexWriter myWriter = null;
               try {
-                  IndexWriter myWriter = openWriter(false);
+                  myWriter = openWriter(false);
                   myWriter.optimize();
-                  myWriter.close();
               } catch (Exception e) {
                   log.info("Could not optimize the lucene index - " + e);
+              } finally {
+                  forceClose(myWriter);
               }
           }
       });
+  }
+  
+  private void deleteDocuments(Query q) throws IOException {
+      List<Integer> deletions = new ArrayList<Integer>();
+      IndexSearcher searcher = null;
+      long start = System.currentTimeMillis();
+      try {
+          searcher = new IndexSearcher(getIndexPath());
+          Hits hits;
+          hits = searcher.search(q);
+          for (int i = 0; i < hits.length(); i++) {
+              deletions.add(hits.id(i));
+              // it is not clear what the right method is to delete documents?
+              // searcher.getIndexReader().deleteDocument(hits.id(i));
+          }
+      } finally {
+          forceClose(searcher);
+      }
+      IndexReader reader = null;
+      try {
+          reader = IndexReader.open(getIndexPath());
+          for (Integer i : deletions) {
+              reader.deleteDocument(i);
+          }
+      } finally {
+          forceClose(reader);
+      }
+      if (log.isLoggable(Level.FINE)) {
+          log.fine("Delete lucene document operation for query " + q  + " took " + 
+                   (System.currentTimeMillis() - start) + "ms");
+      }
   }
   
   
@@ -330,6 +391,9 @@ public abstract class CoreIndexer {
           public void run() {
               if (status == Status.DOWN || !searchableSlots.contains(slot) || isAnonymous(frame)) {
                   return;
+              }
+              if (log.isLoggable(Level.FINER)) {
+                  log.finer("Adding values for frame named " + frame.getName() + " and slot " + slot.getName());
               }
               IndexWriter writer = null;
               try {
@@ -365,27 +429,15 @@ public abstract class CoreIndexer {
               if (status == Status.DOWN || !searchableSlots.contains(slot) || !(value instanceof String)) {
                   return;
               }
-              IndexSearcher searcher = null;
+              if (log.isLoggable(Level.FINER)) {
+                  log.finer("Removing value " + value + " for frame " + frame.getName() + " and slot " + slot.getName());
+              }
               try {
-                  long start = System.currentTimeMillis();
-                  searcher = new IndexSearcher(getIndexPath());
-                  Hits hits = searcher.search(generateLuceneQuery(frame, slot));
-                  for (int i = 0; i < hits.length(); i++) {
-                      Document doc = hits.doc(i);
-                      if (doc.get(CONTENTS_FIELD).equals(value)) {
-                          searcher.getIndexReader().deleteDocument(hits.id(i));
-                          break;
-                      }
-                  }
-                  if (log.isLoggable(Level.FINE)) {
-                      log.fine("remove value operation took " + (System.currentTimeMillis() - start) + "ms");
-                  }
+                  deleteDocuments(generateLuceneQuery(frame, slot, (String) value));
               } catch (IOException ioe) {
                   died(ioe);
               } catch (Throwable t) {
                   Log.getLogger().warning("Exception caught during indexing" + t);
-              } finally {
-                  forceClose(searcher);
               }
           }
       });
@@ -398,31 +450,24 @@ public abstract class CoreIndexer {
               if (status == Status.DOWN || !searchableSlots.contains(slot)) {
                   return;
               }
-              IndexSearcher searcher = null;
+              if (log.isLoggable(Level.FINER)) {
+                  log.finer("Removing all values for frame " + frame.getName() + " and slot " + slot.getName());
+              }
               try {
-                  long start = System.currentTimeMillis();
-                  searcher = new IndexSearcher(getIndexPath());
-                  Hits hits;
+                  Query q = null;
                   if (slot.equals(nameSlot)) {
                       String fname = getFrameName(frame);
-                      hits = searcher.search(generateLuceneQuery(fname));
+                      q = generateLuceneQuery(fname);
                   }
                   else {
-                      hits = searcher.search(generateLuceneQuery(frame, slot));
+                      q = generateLuceneQuery(frame, slot);
                   }
-                  for (int i = 0; i < hits.length(); i++) {
-                      searcher.getIndexReader().deleteDocument(hits.id(i));
-                  }
-                  if (log.isLoggable(Level.FINE)) {
-                      log.fine("remove values operation took " + (System.currentTimeMillis() - start) + "ms");
-                  }
+                  deleteDocuments(q);
               } catch (IOException ioe) {
                   died(ioe);
               } catch (Throwable t) {
                   Log.getLogger().warning("Exception caught during indexing " + t);
-              } finally {
-                  forceClose(searcher);
-              }
+              } 
           }
       });
       installOptimizeTask();
@@ -434,23 +479,15 @@ public abstract class CoreIndexer {
               if (status == Status.DOWN) {
                   return;
               }
-              IndexSearcher searcher = null;
+              if (log.isLoggable(Level.FINER)) {
+                  log.finer("Removing all values for frame named " + fname);
+              }
               try {
-                  long start = System.currentTimeMillis();
-                  searcher = new IndexSearcher(getIndexPath());
-                  Hits hits = searcher.search(generateLuceneQuery(fname));
-                  for (int i = 0; i < hits.length(); i++) {
-                      searcher.getIndexReader().deleteDocument(hits.id(i));
-                  }
-                  if (log.isLoggable(Level.FINE)) {
-                      log.fine("remove values operation took " + (System.currentTimeMillis() - start) + "ms");
-                  }
+                  deleteDocuments(generateLuceneQuery(fname));
               } catch (IOException ioe) {
                   died(ioe);
               } catch (Throwable t) {
                   Log.getLogger().warning("Exception caught during indexing " + t);
-              } finally {
-                  forceClose(searcher);
               }
           }
       });
