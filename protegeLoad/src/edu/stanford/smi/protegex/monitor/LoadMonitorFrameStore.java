@@ -17,13 +17,14 @@ import edu.stanford.smi.protege.util.Log;
 
 public class LoadMonitorFrameStore extends AbstractFrameStoreInvocationHandler {
     private AbstractButton monitorButton;
+    private boolean enabled = true;
     
     private static final long IDLE_TIMEOUT = 100;
 
     private enum State {
         IDLE, RUNNING, AWAITING_IDLE
     }
-    private State state;
+    private State state = State.IDLE;
     private Thread timeoutThread;
     private long lastIdleTime = System.currentTimeMillis();
     private Object lock = new Object();
@@ -50,8 +51,8 @@ public class LoadMonitorFrameStore extends AbstractFrameStoreInvocationHandler {
                         case RUNNING:
                             break;
                         case AWAITING_IDLE:
-                            long time = System.currentTimeMillis();
-                            doNotify = (time - lastIdleTime >= IDLE_TIMEOUT);
+                            long now = System.currentTimeMillis();
+                            doNotify = (now - lastIdleTime >= IDLE_TIMEOUT);
                             if (doNotify) state = State.IDLE;
                             break;
                         default:
@@ -86,6 +87,10 @@ public class LoadMonitorFrameStore extends AbstractFrameStoreInvocationHandler {
     public void dispose() {
         timeoutThread = null;
     }
+    
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+    }
 
     @Override
     protected void executeQuery(Query q, QueryCallback qc) {
@@ -104,21 +109,25 @@ public class LoadMonitorFrameStore extends AbstractFrameStoreInvocationHandler {
     }
     
     private void busy() {
+        boolean doNotify = false;
         synchronized (lock) {
+            doNotify = (state == State.IDLE);
             state = State.RUNNING;
         }
-        // It is possible that this update will get overriden by the color change invoked
-        // by a previous AWAITING_IDLE -> IDLE transition in a race condition.  Hard to 
-        // avoid safely.  Can I safely synchronize invokeLater in the lock?
-        if (EventQueue.isDispatchThread()) {
-            setButtonColor(Color.RED);
-        }
-        else {
-            SwingUtilities.invokeLater(new Runnable() {
-                public void run() {
-                    setButtonColor(Color.RED);
-                }
-            });
+        if (doNotify) {
+            // It is possible that this update will get overriden by the color change invoked
+            // by a previous AWAITING_IDLE -> IDLE transition in a race condition.  Hard to 
+            // avoid safely.  Can I safely synchronize invokeLater in the lock?
+            if (EventQueue.isDispatchThread()) {
+                setButtonColor(Color.RED);
+            }
+            else {
+                SwingUtilities.invokeLater(new Runnable() {
+                    public void run() {
+                        setButtonColor(Color.RED);
+                    }
+                });
+            }
         }
     }
     
@@ -127,6 +136,7 @@ public class LoadMonitorFrameStore extends AbstractFrameStoreInvocationHandler {
     private void idle() {
         synchronized (lock) {
             state = State.AWAITING_IDLE;
+            lastIdleTime = System.currentTimeMillis();
         }
     }
     
@@ -136,6 +146,7 @@ public class LoadMonitorFrameStore extends AbstractFrameStoreInvocationHandler {
      * So it is a significant overhead if it occured on each knowledge base call.
      */
     private void setButtonColor(Color c) {
+        if (!enabled) return;
         Rectangle r = monitorButton.getBounds();
         r.x=0;
         r.y=0;
