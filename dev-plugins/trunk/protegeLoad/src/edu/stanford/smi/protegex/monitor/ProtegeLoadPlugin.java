@@ -22,6 +22,8 @@ import edu.stanford.smi.protege.util.ComponentFactory;
 public class ProtegeLoadPlugin extends ProjectPluginAdapter {
     
     private Dimension buttonSize = new Dimension(15, ComponentFactory.LARGE_BUTTON_HEIGHT);
+    
+    private LoadMonitorFrameStore fsi;
 
     
     /**
@@ -29,13 +31,16 @@ public class ProtegeLoadPlugin extends ProjectPluginAdapter {
      */
     public void afterShow(ProjectView view, ProjectToolBar toolBar, ProjectMenuBar menuBar) {
         Project p = view.getProject();
+        if (p.isMultiUserServer()) {
+            return;  // probably can't get here?
+        }
         DefaultKnowledgeBase kb = (DefaultKnowledgeBase) p.getKnowledgeBase();
         AbstractButton monitorButton = addMonitorButton(toolBar);
         installFrameStore(kb, monitorButton);
     }
     
     public void beforeClose(Project p) {
-        
+        if (fsi != null) fsi.dispose();
     }
     
     
@@ -54,7 +59,7 @@ public class ProtegeLoadPlugin extends ProjectPluginAdapter {
     private void installFrameStore(DefaultKnowledgeBase kb, AbstractButton monitorButton) {
         FrameStore fs = AbstractFrameStoreInvocationHandler.newInstance(LoadMonitorFrameStore.class, kb);
         
-        LoadMonitorFrameStore fsi = (LoadMonitorFrameStore) Proxy.getInvocationHandler(fs);
+        fsi = (LoadMonitorFrameStore) Proxy.getInvocationHandler(fs);
         fsi.setButton(monitorButton);
 
         FrameStore head = kb.getHeadFrameStore();
