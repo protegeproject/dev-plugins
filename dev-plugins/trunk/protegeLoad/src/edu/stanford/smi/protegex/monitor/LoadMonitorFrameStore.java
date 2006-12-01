@@ -19,7 +19,7 @@ public class LoadMonitorFrameStore extends AbstractFrameStoreInvocationHandler {
     private AbstractButton monitorButton;
     private boolean enabled = true;
     
-    private static final long IDLE_TIMEOUT = 100;
+
 
     private enum State {
         IDLE, RUNNING, AWAITING_IDLE
@@ -38,7 +38,7 @@ public class LoadMonitorFrameStore extends AbstractFrameStoreInvocationHandler {
                     doNotify = false;
                     synchronized (lock) {
                         try {
-                            lock.wait(IDLE_TIMEOUT);
+                            lock.wait(PluginProperties.getIdleTimeout());
                         } catch (InterruptedException e) {
                             Log.getLogger().log(Level.WARNING, 
                                                 "Why am I getting interrupted?", e);
@@ -52,7 +52,7 @@ public class LoadMonitorFrameStore extends AbstractFrameStoreInvocationHandler {
                             break;
                         case AWAITING_IDLE:
                             long now = System.currentTimeMillis();
-                            doNotify = (now - lastIdleTime >= IDLE_TIMEOUT);
+                            doNotify = (now - lastIdleTime >= PluginProperties.getIdleTimeout());
                             if (doNotify) state = State.IDLE;
                             break;
                         default:
