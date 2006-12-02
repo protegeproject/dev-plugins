@@ -50,6 +50,24 @@
    </target>
 
 
+   <target name = "install" depends = "dist">
+      <fail message = "set the protege.dir variable to do an install">
+         <condition>
+            <not>
+               <and>
+                  <isset property="protege.dir"/>
+                  <available file="${protege.dir}"
+                             type="dir"/>
+               </and>
+            </not>
+         </condition>
+      </fail>
+      <unzip src="${plugins}/${pluginName}.zip" 
+             dest = "${protege.dir}/plugins"
+             overwrite = "true"/>
+   </target>
+
+
    <target name = "junit-compile" depends = "compile">    
      <javac srcdir = "${junit}" destdir = "${classes}" debug="on">
        <classpath refid = "project.classpath"/>
