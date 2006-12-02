@@ -26,7 +26,7 @@ public class ProtegeLoadPlugin extends ProjectPluginAdapter {
     
     private Dimension buttonSize = new Dimension(15, ComponentFactory.LARGE_BUTTON_HEIGHT);
     private static Map<Project, ServerMonitor> monitors = new HashMap<Project, ServerMonitor>();
-
+    private static Map<Project, LoadMonitorFrameStore> frameStores = new HashMap<Project, LoadMonitorFrameStore>();
     
     /**
      * Called after the view has been added to the screen
@@ -39,26 +39,22 @@ public class ProtegeLoadPlugin extends ProjectPluginAdapter {
         }
         DefaultKnowledgeBase kb = (DefaultKnowledgeBase) p.getKnowledgeBase();
         if (p.isMultiUserClient()) {
-            synchronized (monitors) {
-                monitors.put(p, new ServerMonitor(toolBar, kb));
-            }
+            monitors.put(p, new ServerMonitor(toolBar, kb));
         }
         AbstractButton monitorButton = addMonitorButton(toolBar);
-        installFrameStore(kb, monitorButton);
+        LoadMonitorFrameStore fs = installFrameStore(kb, monitorButton);
+        frameStores.put(p, fs);
     }
     
     public void beforeClose(Project p) {
-        synchronized (monitors) {
-            ServerMonitor monitor = monitors.get(p);
-            if (monitor != null) {
-                monitor.dispose();
-            }
+        ServerMonitor monitor = monitors.get(p);
+        if (monitor != null) {
+            monitor.dispose();
         }
-        DefaultKnowledgeBase kb = (DefaultKnowledgeBase) p.getKnowledgeBase();
-        FrameStoreManager fsm = kb.getFrameStoreManager();
-        FrameStore fs = fsm.getFrameStoreFromClass(LoadMonitorFrameStore.class);
-        LoadMonitorFrameStore fsi = (LoadMonitorFrameStore) Proxy.getInvocationHandler(fs);
-        fsi.dispose();
+        LoadMonitorFrameStore fs = frameStores.get(p);
+        if (fs != null) {
+            fs.dispose();
+        }
     }
     
     private AbstractButton addMonitorButton(ProjectToolBar toolBar) {
@@ -73,15 +69,15 @@ public class ProtegeLoadPlugin extends ProjectPluginAdapter {
         return monitorButton;
     }
     
-    private void installFrameStore(DefaultKnowledgeBase kb, AbstractButton monitorButton) {
+    private LoadMonitorFrameStore installFrameStore(DefaultKnowledgeBase kb, AbstractButton monitorButton) {
         FrameStore fs = AbstractFrameStoreInvocationHandler.newInstance(LoadMonitorFrameStore.class, kb);
         
         LoadMonitorFrameStore fsi = (LoadMonitorFrameStore) Proxy.getInvocationHandler(fs);
         fsi.setButton(monitorButton);
-
         FrameStore head = kb.getHeadFrameStore();
         fs.setDelegate(head.getDelegate());
         head.setDelegate(fs);
+        return fsi;
     }
     
 

@@ -35,6 +35,7 @@ public class ServerMonitor {
         serverUpButton.setFocusable(false);
         serverUpButton.setBackground(Color.WHITE);
         serverUpButton.setBorder(BorderFactory.createEmptyBorder(0, 5, 0, 5));
+        toolBar.add(serverUpButton);
         new Thread(new ServerPing(kb), "Server Ping Thread").start();
         new Thread(new ServerPingMonitor(serverUpButton), "Ping Monitor Thread").start();       
     }
@@ -64,7 +65,7 @@ public class ServerMonitor {
             while (true) {
                 synchronized (pingLock) {
                     try {
-                        wait(PluginProperties.getServerPingInterval());
+                        pingLock.wait(PluginProperties.getServerPingInterval());
                     } catch (InterruptedException e) {
                         interrupted(e);
                     }
