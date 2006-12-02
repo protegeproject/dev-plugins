@@ -5,7 +5,7 @@
    <property name = "plugins" value = "../plugins"/>
    <property name = "lib" value = "../lib"/>
    <property name = "transaction_plugin_dist" value = "edu.stanford.protege.transaction"/>
-	
+   <property name = "pluginName" value = "transaction_plugin"/>
    <path id = "project.classpath">    
      <pathelement location = "${lib}/protege.jar"/>
    </path>
@@ -32,8 +32,26 @@
    <target name = "dist" depends = "jar">
      <zip basedir = "${plugins}"
           includes = "${transaction_plugin_dist}/**"
-          destfile = "${plugins}/transaction_plugin.zip"/>
+          destfile = "${plugins}/${pluginName}.zip"/>
    </target>
+
+   <target name = "install" depends = "dist">
+      <fail message = "set the protege.dir variable to do an install">
+         <condition>
+            <not>
+               <and>
+                  <isset property="protege.dir"/>
+                  <available file="${protege.dir}"
+                             type="dir"/>
+               </and>
+            </not>
+         </condition>
+      </fail>
+      <unzip src="${plugins}/${pluginName}.zip" 
+             dest = "${protege.dir}/plugins"
+             overwrite = "true"/>
+   </target>
+
 
    <target name = "clean">
      <delete dir = "${plugins}"/>
