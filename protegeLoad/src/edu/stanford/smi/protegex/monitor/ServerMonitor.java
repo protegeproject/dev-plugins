@@ -28,12 +28,15 @@ public class ServerMonitor {
     private Object pingLock = new Object();
     
     public ServerMonitor(ProjectToolBar toolBar, KnowledgeBase kb) {
+        if (!checkPing(kb)) {
+            return;
+        }
         JMenuItem serverUpButton = new JMenuItem();
         serverUpButton.setPreferredSize(buttonSize);
         serverUpButton.setMinimumSize(buttonSize);
         serverUpButton.setMaximumSize(buttonSize);
         serverUpButton.setFocusable(false);
-        serverUpButton.setBackground(Color.WHITE);
+        serverUpButton.setBackground(Color.GREEN);
         serverUpButton.setBorder(BorderFactory.createEmptyBorder(0, 5, 0, 5));
         toolBar.add(serverUpButton);
         new Thread(new ServerPing(kb), "Server Ping Thread").start();
@@ -50,15 +53,28 @@ public class ServerMonitor {
         Log.getLogger().log(Level.WARNING, "Huh... What?", e);
     }
 
+    private boolean checkPing(KnowledgeBase kb) {
+        try {
+            (new Ping(kb)).execute();
+        }
+        catch (Throwable t) {
+            for (Throwable cause = t; cause != null ; cause = cause.getCause()) {
+                if (cause instanceof ClassNotFoundException) {
+                    Log.getLogger().info("Server does not support ping operation");
+                    return false;
+                }
+            }
+            Log.getLogger().log(Level.WARNING, "Exception found attempting ping to server", t);
+            return false;
+        }
+        return true;
+    }
     
     private class ServerPing implements Runnable {
         private KnowledgeBase kb;
-        private RemoteClientFrameStore rcfs;
         
         public ServerPing(KnowledgeBase kb) {
             this.kb = kb;
-            FrameStoreManager fsm = ((DefaultKnowledgeBase) kb).getFrameStoreManager();
-            rcfs = (RemoteClientFrameStore) fsm.getFrameStoreFromClass(RemoteClientFrameStore.class);
         }
 
         public void run() {
@@ -73,7 +89,7 @@ public class ServerMonitor {
                     pingState = PingState.PING_IN_PROGRESS;
                     pingStartTime = System.currentTimeMillis();
                 }
-                rcfs.executeProtegeJob(new Ping(kb));
+                (new Ping(kb)).execute();
                 synchronized (pingLock) {
                     if (pingState == PingState.SHUTDOWN) return;
                     pingState = PingState.IDLE;
@@ -93,41 +109,42 @@ public class ServerMonitor {
         }
 
         public void run() {
-            boolean doNotify = false;
-            synchronized (pingLock) {
-                try {
-                    pingLock.wait(PluginProperties.getServerPingInterval());
-                } catch (InterruptedException e) {
-                    interrupted(e);
+            while (true) {
+                boolean doNotify = false;
+                synchronized (pingLock) {
+                    try {
+                        pingLock.wait(PluginProperties.getServerPingInterval());
+                    } catch (InterruptedException e) {
+                        interrupted(e);
+                    }
+                    if (pingState == PingState.SHUTDOWN) return;
+                    if (pingState == PingState.PING_IN_PROGRESS && 
+                            System.currentTimeMillis() > pingStartTime + PluginProperties.getLatePingTimeout()) {
+                        if (serverUp) doNotify = true;
+                        serverUp = false;
+                    }
+                    else if (!serverUp) {
+                        doNotify = true;
+                        serverUp = true;
+                    }
                 }
-                if (pingState == PingState.SHUTDOWN) return;
-                if (pingState == PingState.PING_IN_PROGRESS && 
-                        System.currentTimeMillis() > pingStartTime + PluginProperties.getLatePingTimeout()) {
-                    if (serverUp) doNotify = true;
-                    serverUp = false;
-                }
-                else if (!serverUp) {
-                    doNotify = true;
-                    serverUp = true;
-                }
-            }
-            if (doNotify) {
-                if (serverUp) {
-                    SwingUtilities.invokeLater(new Runnable() {
-                        public void run() {
-                            serverPingButton.setBackground(Color.GREEN);
-                        }
-                    });
-                }
-                else {
-                    SwingUtilities.invokeLater(new Runnable() {
-                        public void run() {
-                            serverPingButton.setBackground(Color.RED);
-                        }
-                    });
+                if (doNotify) {
+                    if (serverUp) {
+                        SwingUtilities.invokeLater(new Runnable() {
+                            public void run() {
+                                serverPingButton.setBackground(Color.GREEN);
+                            }
+                        });
+                    }
+                    else {
+                        SwingUtilities.invokeLater(new Runnable() {
+                            public void run() {
+                                serverPingButton.setBackground(Color.RED);
+                            }
+                        });
+                    }
                 }
             }
         }
-        
     }
 }
