@@ -5,6 +5,7 @@
    <property name = "plugins" value = "../plugins"/>
    <property name = "lib" value = "../lib"/>
    <property name = "browserId_plugin_dist" value = "edu.stanford.protege.ui.browserid"/>
+   <property name = "plugin_name" value = "browserId_plugin"/>
 	
    <path id = "project.classpath">    
      <pathelement location = "${lib}/protege.jar"/>
@@ -33,8 +34,26 @@
    <target name = "dist" depends = "jar">
      <zip basedir = "${plugins}"
           includes = "${browserId_plugin_dist}/**"
-          destfile = "${plugins}/browserId_plugin.zip"/>
+          destfile = "${plugins}/${plugin_name}.zip"/>
    </target>
+
+   <target name = "install" depends = "dist">
+      <fail message = "set the protege.dir variable to do an install">
+         <condition>
+            <not>
+               <and>
+                  <isset property="protege.dir"/>
+                  <available file="${protege.dir}"
+                             type="dir"/>
+               </and>
+            </not>
+         </condition>
+      </fail>
+      <unzip src="${plugins}/${plugin_name}.zip" 
+             dest = "${protege.dir}/plugins"
+             overwrite = "true"/>
+   </target>
+
 
    <target name = "clean">
      <delete dir = "${plugins}"/>
