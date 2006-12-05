@@ -144,14 +144,7 @@ public class OWLRestrictionQuery implements Query, Serializable {
   }
 
   public void localize(KnowledgeBase kb) {
-    LocalizeUtils.localize(equivalentClass, kb);
-    LocalizeUtils.localize(someValuesFrom, kb);
-    LocalizeUtils.localize(onProperty, kb);
-    LocalizeUtils.localize(owlIntersectionOf, kb);
-    LocalizeUtils.localize(rdfFirst, kb);
-    LocalizeUtils.localize(rdfRest, kb);
-    LocalizeUtils.localize(directSubclasses, kb);
-    LocalizeUtils.localize(nameSlot, kb);
+    initializeOWLEntities((OWLModel) kb);
     LocalizeUtils.localize(property, kb);
     query.localize(kb);
   }
