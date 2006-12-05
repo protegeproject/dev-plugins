@@ -151,7 +151,8 @@ public class LoadMonitorFrameStore extends AbstractFrameStoreInvocationHandler {
         r.x=0;
         r.y=0;
         monitorButton.setBackground(c);
-        monitorButton.paintImmediately(r);
+        monitorButton.paint(monitorButton.getGraphics());
+        // monitorButton.paintImmediately(r);
     }
 
 }
