@@ -38,7 +38,7 @@ public class ProtegeLoadPlugin extends ProjectPluginAdapter {
             return;  // probably can't get here?
         }
         DefaultKnowledgeBase kb = (DefaultKnowledgeBase) p.getKnowledgeBase();
-        if (p.isMultiUserClient()) {
+        if (PluginProperties.getServerPingEnabled() && p.isMultiUserClient()) {
             monitors.put(p, new ServerMonitor(toolBar, kb));
         }
         AbstractButton monitorButton = addMonitorButton(toolBar);
