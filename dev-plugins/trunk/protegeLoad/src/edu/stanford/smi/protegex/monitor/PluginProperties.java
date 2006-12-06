@@ -4,6 +4,10 @@ import edu.stanford.smi.protege.util.ApplicationProperties;
 import edu.stanford.smi.protege.util.Log;
 
 public class PluginProperties {
+    public static final String ENABLE_SERVER_PING="monitor.load.ping.enable";
+    public static final boolean DEFAULT_SERVER_PING_ENABLED=false;
+    private static boolean server_ping_enabled;
+    
     public static final String IDLE_TIMEOUT_PROPERTY="monitor.load.idle_timeout";
     public static final long DEFAULT_IDLE_TIMEOUT = 100;
     private static Long idle_timeout;
@@ -38,6 +42,14 @@ public class PluginProperties {
         return late_ping;
     }
     
+    public static boolean getServerPingEnabled() {
+        String value = ApplicationProperties.getApplicationOrSystemProperty(ENABLE_SERVER_PING);
+        if (value != null) {
+            return new Boolean(value);
+        }
+        return DEFAULT_SERVER_PING_ENABLED;
+    }
+
     private static Long getLong(String property, long defaultValue) {
         try {
             String value = 
