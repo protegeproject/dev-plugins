@@ -240,7 +240,9 @@ public class QueryTreeFinderComponent extends JPanel implements Disposable {
     }
 
 	public void dispose() {
-		advanceQueryTabWidget.dispose();
+        if (advanceQueryTabWidget != null) {
+            advanceQueryTabWidget.dispose();
+        }
 	}
 	
 }
