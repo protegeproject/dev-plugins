@@ -10,6 +10,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Set;
 import java.util.Vector;
+import java.util.Iterator;
 
 import javax.swing.AbstractAction;
 import javax.swing.Action;
@@ -56,6 +57,20 @@ import edu.stanford.smi.protegex.owl.model.OWLModel;
 import edu.stanford.smi.protegex.owl.ui.icons.OWLIcons;
 import edu.stanford.smi.protegex.owl.ui.icons.OverlayIcon;
 
+
+
+import edu.stanford.smi.protege.model.Cls;
+import edu.stanford.smi.protege.ui.ProjectManager;
+import edu.stanford.smi.protege.ui.ProjectView;
+import edu.stanford.smi.protege.util.Selectable;
+import edu.stanford.smi.protege.util.ViewAction;
+import edu.stanford.smi.protege.widget.TabWidget;
+
+
+import gov.nih.nci.protegex.edit.EditDialog;
+
+import gov.nih.nci.protegex.edit.NCIEditTab;
+
 /**
  * {@link TabWidget} for doing advanced queries.
  *
@@ -75,7 +90,7 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 	private boolean canIndex;
 	private boolean isOWL;
 	private Slot defaultSlot = null;
-	
+
 	private ListPanel queriesListPanel;
 	private SelectableList lstResults;
 	private JRadioButton btnAndQuery;
@@ -84,7 +99,7 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 	private JButton btnSearch;
 	private LabeledComponent resultsComponent;
 	private QueryFrameRenderer frameRenderer;
-	
+
 	public AdvancedQueryPlugin() {
 		super();
 		this.canIndex = false;
@@ -93,7 +108,7 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 		this.frameRenderer = new QueryFrameRenderer();
 		this.frameRenderer.setMatchColor(new Color(24, 72, 124));
 	}
-	
+
 	/**
 	 * Initializes this {@link TabWidget}.  Installs the {@link NarrowFrameStore} and initializes the UI.
 	 */
@@ -118,10 +133,10 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 		// add the default first query component
 		addQueryComponent();
 	}
-	
-	
-	
-	
+
+
+
+
 	/**
 	 * Creates the GUI, initializing the components and adding them to the tab.
 	 */
@@ -206,7 +221,7 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 		btnProgress.setFont(btnProgress.getFont().deriveFont(Font.BOLD));
 		btnProgress.setForeground(Color.darkGray);
 	}
-	
+
 	/**
 	 * Initializes and returns the query {@link ListPanel}.  This is the panel that contains 
 	 * all the queries (there will always be at least one query).
@@ -227,7 +242,7 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 		return queriesListPanel;
 	}
 
-	
+
 	/**
 	 * Initializes and returns the bottom query panel which contains
 	 * the "Add Query", "Clear" and "Search" buttons, as well as the 
@@ -293,12 +308,31 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 		    public void onView(Object o) {
 		    	if (o instanceof Instance) {
 			    	// TODO - display in NCI Editor?
-			        kb.getProject().show((Instance)o);
+			        //kb.getProject().show((Instance)o);
+
+// KLO start
+			        Collection c = lstResults.getSelection();
+			        Iterator it = c.iterator();
+			        Object obj = it.next();
+
+			        final ProjectView projectView = ProjectManager.getProjectManager().getCurrentProjectView();
+			        TabWidget tab = (TabWidget) projectView.getTabByClassName("gov.nih.nci.protegex.edit.NCIEditTab");
+			        EditDialog dlg = new EditDialog((NCIEditTab) tab, (Cls) obj);
+// KLO end
 				}
 		    }
 		};
 	}
-	
+
+// KLO start
+
+    public Collection getSelection()
+    {
+		return lstResults.getSelection();
+	}
+
+// KLO end
+
 	private Action getAddQueryAction() {
 		return new AbstractAction("Add Query", Icons.getAddQueryLibraryIcon()) {
 			public void actionPerformed(ActionEvent e) {
@@ -306,7 +340,7 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 			}
 		};
 	}
-	
+
 	private Action getAddRestrictionQueryAction() {
 		Icon icon = new OverlayIcon(OWLIcons.getImageIcon(OWLIcons.OWL_RESTRICTION).getImage(), 5, 5, 
 									OWLIcons.getImageIcon(OWLIcons.ADD_OVERLAY).getImage(), 15, 13, 15, 16);
@@ -315,7 +349,7 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 				QueryUtil.addRestrictionQueryComponent((OWLModel)kb, slots, defaultSlot, queriesListPanel);
 			}
 		};
-	}	
+	}
 
 	public void setQueryComponent(Slot slot, String defaultValue ){
 		queriesListPanel.removeAllPanels();
@@ -323,11 +357,11 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 		queriesListPanel.repaint();
 		queriesListPanel.revalidate();
 	}
-	
+
 	private void addQueryComponent() {
 		QueryUtil.addQueryComponent(kb, slots, defaultSlot, queriesListPanel);
 	}
-	
+
 	/**
 	 * Removes all the query components and then adds one back as the starting query.
 	 */
@@ -337,7 +371,7 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 		queriesListPanel.repaint();
 	}
 
-	
+
 	/**
 	 * Creates the {@link Query} object from all the {@link QueryComponent}s.
 	 * If there are multiple queries then either an {@link AndQuery} or an {@link OrQuery} are used.  
@@ -398,5 +432,5 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 		}
 		return hits;
 	}
-	
+
 }
