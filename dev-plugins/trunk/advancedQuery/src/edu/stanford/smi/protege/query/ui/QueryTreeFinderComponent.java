@@ -33,8 +33,10 @@ import edu.stanford.smi.protege.util.Disposable;
 import edu.stanford.smi.protege.util.Log;
 import edu.stanford.smi.protege.util.StandardAction;
 
+import javax.swing.JDialog;
+
 /**
- * This class instantiates the Advanced Quert Plugin, so that it can be called 
+ * This class instantiates the Advanced Quert Plugin, so that it can be called
  * as a finder component, not as a tab widget.
  * This class is implemented as a singleton.
  * @author Tania Tudorache
@@ -47,7 +49,7 @@ public class QueryTreeFinderComponent extends JPanel implements Disposable {
 	private static QueryTreeFinderComponent queryTreeFinderComponent = null;
 
 	private KnowledgeBase kb;
-	
+
 	private final JFrame frame = createJFrame();
 
 	private AdvancedQueryPlugin advanceQueryTabWidget;
@@ -57,7 +59,7 @@ public class QueryTreeFinderComponent extends JPanel implements Disposable {
 	private JComboBox _comboBox;
 
 	private Action _findButtonAction;
-	
+
 
 	private QueryTreeFinderComponent(KnowledgeBase kb) {
 		this.kb = kb;
@@ -74,7 +76,7 @@ public class QueryTreeFinderComponent extends JPanel implements Disposable {
 		return new QueryTreeFinderComponent(kb);
 	}
 
-	
+
 	private void initialize() {
 		_findButtonAction = getFindAction();
 
@@ -82,8 +84,8 @@ public class QueryTreeFinderComponent extends JPanel implements Disposable {
 		add(createTextField(), BorderLayout.CENTER);
 		add(createFindButton(), BorderLayout.EAST);
 		setBorder(BorderFactory.createEmptyBorder(2, 0, 0, 0));
-	}	
-	
+	}
+
 	private void doFind() {
 		String text = (String) _comboBox.getSelectedItem();
 
@@ -93,7 +95,7 @@ public class QueryTreeFinderComponent extends JPanel implements Disposable {
 		showAdvanceQueryDialog(text);
 	}
 
-	private void showAdvanceQueryDialog(String text) {		
+	private void showAdvanceQueryDialog(String text) {
 		//Initial case - should be called only once. It could also be moved to the constructor or initialize.
 		if (advanceQueryTabWidget == null) {
 			advanceQueryTabWidget = getAdvanceQueryTabWidget();
@@ -101,16 +103,17 @@ public class QueryTreeFinderComponent extends JPanel implements Disposable {
 			if (advanceQueryTabWidget == null) {
 				Log.getLogger().warning("Advanced Query Plugin not found. Please check whether the plugin is installed correctly.");
 				return;
-			}		
-			
-			frame.getContentPane().add(advanceQueryTabWidget);
-			frame.pack();	
+			}
 		}
-		
-		
+
+		frame.getContentPane().add(advanceQueryTabWidget);
+		frame.pack();
+
 		advanceQueryTabWidget.setQueryComponent(null, text);
 		
 		frame.setVisible(true);		
+
+		frame.setVisible(true);
 
 		bringFrameToFront();
 		
@@ -151,7 +154,7 @@ public class QueryTreeFinderComponent extends JPanel implements Disposable {
 		return _comboBox;
 	}
 
-	
+
 	private JFrame createJFrame() {
 		final JFrame frame = ComponentFactory.createFrame();
 		frame.setTitle("Advanced search");
@@ -164,7 +167,7 @@ public class QueryTreeFinderComponent extends JPanel implements Disposable {
 
 		return frame;
 	}
-		
+
 
 	private PopupMenuListener createPopupMenuListener() {
 		return new PopupMenuListener() {
@@ -215,7 +218,7 @@ public class QueryTreeFinderComponent extends JPanel implements Disposable {
 		return advanceQueryTabWidget;
 	}
 
-	
+
 	public Action getFindAction() {
 		if (_findButtonAction != null)
 			return _findButtonAction;
@@ -227,8 +230,8 @@ public class QueryTreeFinderComponent extends JPanel implements Disposable {
 		};
 		return _findButtonAction;
 	}
-	
-	
+
+
     private void bringFrameToFront() {
         if (frame != null && frame.isVisible()) {
             SwingUtilities.invokeLater(new Runnable() {
@@ -244,5 +247,5 @@ public class QueryTreeFinderComponent extends JPanel implements Disposable {
             advanceQueryTabWidget.dispose();
         }
 	}
-	
+
 }
