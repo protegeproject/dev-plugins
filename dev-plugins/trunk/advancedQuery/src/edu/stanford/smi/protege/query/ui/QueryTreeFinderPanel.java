@@ -22,6 +22,7 @@ import javax.swing.JToolBar;
 import javax.swing.SwingUtilities;
 import javax.swing.event.PopupMenuEvent;
 import javax.swing.event.PopupMenuListener;
+import javax.swing.tree.TreePath;
 
 import edu.stanford.smi.protege.model.KnowledgeBase;
 import edu.stanford.smi.protege.model.Project;
@@ -32,8 +33,8 @@ import edu.stanford.smi.protege.util.ComponentFactory;
 import edu.stanford.smi.protege.util.Disposable;
 import edu.stanford.smi.protege.util.Log;
 import edu.stanford.smi.protege.util.StandardAction;
+import edu.stanford.smi.protege.util.WaitCursor;
 
-import javax.swing.JDialog;
 import javax.swing.*;
 import java.awt.Dimension;
 
@@ -296,7 +297,15 @@ public class QueryTreeFinderPanel extends JPanel implements Disposable {
 
 
     private void setExpandedCls(Cls cls, Collection c) {
-        Collection path = ModelUtilities.getPathToRoot(cls);
-        ComponentUtilities.setSelectedObjectPath(tree, path);
-    }
+		Collection objectPath = ModelUtilities.getPathToRoot(cls);
+
+		TreePath path = ComponentUtilities.getTreePath(tree, objectPath);
+
+		if (path != null) {			
+			tree.scrollPathToVisible(path);
+			tree.setSelectionPath(path);						
+		}
+	}
+        
+    
 }
