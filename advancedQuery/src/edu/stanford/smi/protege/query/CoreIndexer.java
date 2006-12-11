@@ -341,8 +341,8 @@ public abstract class CoreIndexer {
               try {
                   myWriter = openWriter(false);
                   myWriter.optimize();
-              } catch (Exception e) {
-                  log.info("Could not optimize the lucene index - " + e);
+              } catch (IOException e) {
+                  died(e);
               } finally {
                   forceClose(myWriter);
               }
@@ -387,6 +387,9 @@ public abstract class CoreIndexer {
    */
   
   public void addValues(final Frame frame, final Slot slot, final Collection values) { 
+      if (status == Status.DOWN || !searchableSlots.contains(slot) || isAnonymous(frame)) {
+          return;
+      }
       indexRunner.addTask(new FutureTask() {
           public void run() {
               if (status == Status.DOWN || !searchableSlots.contains(slot) || isAnonymous(frame)) {
@@ -424,6 +427,9 @@ public abstract class CoreIndexer {
   }
   
   public void removeValue(final Frame frame, final Slot slot, final Object value) {
+      if (status == Status.DOWN || !searchableSlots.contains(slot) || !(value instanceof String)) {
+          return;
+      }
       indexRunner.addTask(new FutureTask() {
           public void run() {
               if (status == Status.DOWN || !searchableSlots.contains(slot) || !(value instanceof String)) {
@@ -445,6 +451,9 @@ public abstract class CoreIndexer {
   }
   
   public void removeValues(final Frame frame, final Slot slot) {
+      if (status == Status.DOWN || !searchableSlots.contains(slot)) {
+          return;
+      }
       indexRunner.addTask(new FutureTask() {
           public void run() {
               if (status == Status.DOWN || !searchableSlots.contains(slot)) {
@@ -474,6 +483,9 @@ public abstract class CoreIndexer {
   }
   
   public void removeValues(final String fname) {
+      if (status == Status.DOWN) {
+          return;
+      }
       indexRunner.addTask(new FutureTask() {
           public void run() {
               if (status == Status.DOWN) {
