@@ -1,5 +1,5 @@
 <?xml version = "1.0" encoding = "utf-8"?>
-<project name = "Developer Plugins" default = "dist" basedir = ".">    
+<project name = "Query Plugin" default = "dist" basedir = ".">    
    <property name = "src" value = "./src"/>  
    <property name = "classes" value = "./classes"/>  
    <property name = "plugins" value = "../plugins"/>
@@ -13,6 +13,7 @@
      <pathelement location = "${lib}/protege-owl.jar"/>
      <pathelement location = "./lib/lucene-core-2.0.1-dev.jar"/>
      <pathelement location = "./lib/phonetix-0.2.jar"/>
+     <pathelement location = "./lib/nciedittab.jar"/>
    </path>
 
    <target name = "init">
