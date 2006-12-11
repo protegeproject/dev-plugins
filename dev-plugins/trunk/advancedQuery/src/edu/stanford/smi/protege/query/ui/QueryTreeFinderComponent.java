@@ -104,19 +104,16 @@ public class QueryTreeFinderComponent extends JPanel implements Disposable {
 				Log.getLogger().warning("Advanced Query Plugin not found. Please check whether the plugin is installed correctly.");
 				return;
 			}
+			
+			frame.getContentPane().add(advanceQueryTabWidget);
+			frame.pack();
 		}
-
-		frame.getContentPane().add(advanceQueryTabWidget);
-		frame.pack();
-
 		advanceQueryTabWidget.setQueryComponent(null, text);
 		
-		frame.setVisible(true);		
-
-		frame.setVisible(true);
-
-		bringFrameToFront();
-		
+		//hack to bring frame to front if hidden by other window
+		frame.setVisible(false);
+		frame.setVisible(true);	
+			
 		if (text != null && text.length() > 0)
 			advanceQueryTabWidget.doSearch();
 	}
