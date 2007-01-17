@@ -9,7 +9,6 @@ import edu.stanford.smi.protege.model.Cls;
 import edu.stanford.smi.protege.ui.ProjectView;
 import edu.stanford.smi.protege.util.Selectable;
 import edu.stanford.smi.protege.widget.TabWidget;
-import gov.nih.nci.protegex.edit.EditDialog;
 
 /**
  * This action is used to show the {@link EditDialog}.
