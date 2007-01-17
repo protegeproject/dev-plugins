@@ -39,6 +39,7 @@ public class QueryFrameRenderer extends FrameRenderer {
 	private boolean appendQuery;
 	private boolean bold;
 	private Color matchColor;
+	private Color searchColor = null;
 	private Font oldFont;
 	private FontMetrics oldMetrics;
 	private Color oldColor;
@@ -50,6 +51,7 @@ public class QueryFrameRenderer extends FrameRenderer {
 		this.appendQuery = false;
 		this.bold = true;
 		this.matchColor = null;
+		this.searchColor = new Color(84, 24, 84);
 		this.oldFont = null;
 		this.oldMetrics = null;
 		this.oldColor = null;
@@ -67,6 +69,19 @@ public class QueryFrameRenderer extends FrameRenderer {
 	public Color getMatchColor() {
 		return matchColor;
 	}
+	
+	/**
+	 * Sets the color to use for the "Searching..." string.
+	 * If null then the string is painted with same color (default).
+	 * @param c the color to paint the "Searching..." string
+	 */
+	public void setSearchColor(Color c) {
+		this.searchColor = c;
+	}
+	
+	public Color getSearchColor() {
+		return searchColor;
+	}	
 	
 	/**
 	 * Sets whether matches should be painted using a bold font.
@@ -192,7 +207,7 @@ public class QueryFrameRenderer extends FrameRenderer {
 				paintString(g, before, position, y, false);
 				
 				// MATCHED
-				highlightOn(g);
+				highlightOn(g, matchColor);
 				paintString(g, m.group(), position, y, true);
 				highlightOff(g);
 				
@@ -207,13 +222,23 @@ public class QueryFrameRenderer extends FrameRenderer {
 			paintString(g, extra, position, y, false);
 			
 		}
+		
+		boolean searching = AdvancedQueryPlugin.SEARCHING_ITEM.equals(text); 		
+		if (searching) {
+			highlightOn(g, searchColor);
+		}
+		
 		// call the super method if we didn't paint the string already
 		if (callSuper) {
 			super.paintString(g, text, position, color, size);
 		}
+		
+		if (searching) {
+			highlightOff(g);
+		}
 	}
 	
-	private void highlightOn(Graphics g) {
+	private void highlightOn(Graphics g, Color highlightColor) {
 		// set the font and color
 		if (bold) {
 			oldFont = g.getFont();
@@ -221,9 +246,9 @@ public class QueryFrameRenderer extends FrameRenderer {
 			oldMetrics = _fontMetrics;
 			_fontMetrics = g.getFontMetrics();
 		}
-		if (matchColor != null) {
+		if (highlightColor != null) {
 			oldColor = g.getColor();
-			g.setColor(matchColor);
+			g.setColor(highlightColor);
 		}
 	}
 	

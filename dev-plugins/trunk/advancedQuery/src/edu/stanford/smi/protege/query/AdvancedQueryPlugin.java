@@ -10,7 +10,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Set;
 import java.util.Vector;
-import java.util.Iterator;
 
 import javax.swing.AbstractAction;
 import javax.swing.Action;
@@ -28,7 +27,6 @@ import javax.swing.JSplitPane;
 import javax.swing.SwingUtilities;
 
 import edu.stanford.smi.protege.model.Frame;
-import edu.stanford.smi.protege.model.Instance;
 import edu.stanford.smi.protege.model.KnowledgeBase;
 import edu.stanford.smi.protege.model.Slot;
 import edu.stanford.smi.protege.model.framestore.NarrowFrameStore;
@@ -57,20 +55,6 @@ import edu.stanford.smi.protegex.owl.model.OWLModel;
 import edu.stanford.smi.protegex.owl.ui.icons.OWLIcons;
 import edu.stanford.smi.protegex.owl.ui.icons.OverlayIcon;
 
-
-
-import edu.stanford.smi.protege.model.Cls;
-import edu.stanford.smi.protege.ui.ProjectManager;
-import edu.stanford.smi.protege.ui.ProjectView;
-import edu.stanford.smi.protege.util.Selectable;
-import edu.stanford.smi.protege.util.ViewAction;
-import edu.stanford.smi.protege.widget.TabWidget;
-
-
-import gov.nih.nci.protegex.edit.EditDialog;
-
-import gov.nih.nci.protegex.edit.NCIEditTab;
-
 /**
  * {@link TabWidget} for doing advanced queries.
  *
@@ -79,7 +63,9 @@ import gov.nih.nci.protegex.edit.NCIEditTab;
  */
 public class AdvancedQueryPlugin extends AbstractTabWidget {
 
+	public static final String SEARCHING_ITEM = "Searching...";
 	private static final String SEARCH_RESULTS = "Search Results";
+	private static final String SEARCH_IN_PROGRESS = "Search Results (search in progress)";
 
 	private static final long serialVersionUID = -5589620508506925170L;
 
@@ -90,6 +76,11 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 	private boolean canIndex;
 	private boolean isOWL;
 	private Slot defaultSlot = null;
+	
+	private ViewAction editAction;
+	private ViewAction viewAction;
+	private JButton viewButton;
+	private JButton editButton;
 
 	private ListPanel queriesListPanel;
 	private SelectableList lstResults;
@@ -125,17 +116,14 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
         // TODO determine default slot, from properties file?
 		this.defaultSlot = kb.getSlot("Preferred_Name");
 		if (defaultSlot == null) {
-        	    defaultSlot = kb.getNameSlot();
+        	defaultSlot = kb.getNameSlot();
 		}
-        
+		       
         // add UI components
 		createGUI();
 		// add the default first query component
 		addQueryComponent();
 	}
-
-
-
 
 	/**
 	 * Creates the GUI, initializing the components and adding them to the tab.
@@ -172,20 +160,39 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 		pnlLeft.add(getQueryBottomPanel(), BorderLayout.SOUTH);		
 
 		SelectableList lst = getResultsList();
-		this.resultsComponent = new LabeledComponent(SEARCH_RESULTS, new JScrollPane(lst), true);
-		resultsComponent.addHeaderButton(getViewAction());
+		resultsComponent = new LabeledComponent(SEARCH_RESULTS, new JScrollPane(lst), true);
 		resultsComponent.setFooterComponent(new ListFinder(lst, "Find Instance"));
-		
-		// Add action for showing in NCI Edit Tab
-		if (isOWL) {
-			// TODO different icon?
-			resultsComponent.addHeaderButton(new ViewInNCIEditorAction("View Cls in the NCI Edit Tab", lstResults, Icons.getViewClsIcon()));
-		}
 
+		viewButton = resultsComponent.addHeaderButton(getViewAction());	// won't be null
+		editButton = resultsComponent.addHeaderButton(getEditAction());	// might be null
+		
 		JSplitPane splitter = ComponentFactory.createLeftRightSplitPane();
 		splitter.setLeftComponent(lcLeft);
 		splitter.setRightComponent(resultsComponent);
         add(splitter, BorderLayout.CENTER);
+	}
+	
+	private Action getViewAction() {
+		if (viewAction == null) {
+			if (NCIViewAction.isValid()) {
+				// Add action for showing in NCI Edit Tab
+				viewAction = new NCIViewAction("View Cls in the NCI Edit Tab", lstResults, Icons.getViewClsIcon());
+			} else {
+				// add the default view instance action
+				viewAction = new DefaultInstanceViewAction("View Instance", lstResults, Icons.getViewClsIcon(), kb);
+			}
+		}
+		return viewAction;
+	}
+	
+	private Action getEditAction() {
+		if (editAction == null) {
+			if (NCIEditAction.isValid()) {
+				editAction = new NCIEditAction("Edit Cls", lstResults, Icons.getViewInstanceIcon());
+			}
+			// null otherwise
+		}
+		return editAction;
 	}
 
 	/**
@@ -303,36 +310,15 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 		return lstResults;
 	}
 
-	private ViewAction getViewAction() {
-		return new ViewAction("View Instance", lstResults, Icons.getViewInstanceIcon()) {
-		    public void onView(Object o) {
-		    	if (o instanceof Instance) {
-			    	// TODO - display in NCI Editor?
-			        //kb.getProject().show((Instance)o);
-
-// KLO start
-			        Collection c = lstResults.getSelection();
-			        Iterator it = c.iterator();
-			        Object obj = it.next();
-
-			        final ProjectView projectView = ProjectManager.getProjectManager().getCurrentProjectView();
-			        TabWidget tab = (TabWidget) projectView.getTabByClassName("gov.nih.nci.protegex.edit.NCIEditTab");
-			        EditDialog dlg = new EditDialog((NCIEditTab) tab, (Cls) obj);
-// KLO end
-				}
-		    }
-		};
-	}
-
 // KLO start
 
-    public Collection getSelection()
-    {
+    @SuppressWarnings("unchecked")
+	public Collection getSelection() {
 		return lstResults.getSelection();
 	}
 
 // KLO end
-
+    
 	private Action getAddQueryAction() {
 		return new AbstractAction("Add Query", Icons.getAddQueryLibraryIcon()) {
 			public void actionPerformed(ActionEvent e) {
@@ -358,6 +344,30 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 		queriesListPanel.revalidate();
 	}
 
+	/**
+	 * Enables or disables the view and edit buttons in the top right corner of the results panel.
+	 */
+	public void setViewButtonsEnabled(boolean enabled) {
+		if (getViewAction() != null) {
+			getViewAction().setEnabled(enabled);
+		}
+		if (getEditAction() != null) {
+			getEditAction().setEnabled(enabled);
+		}
+	}
+
+	/**
+	 * Shows or hides the view and edit buttons in the top right corner of the results panel.
+	 */
+	public void setViewButtonsVisible(boolean visible) {
+		if (viewButton != null) {
+			viewButton.setVisible(visible);
+		}
+		if (editButton != null) {
+			editButton.setVisible(visible);
+		}
+	}
+	
 	private void addQueryComponent() {
 		QueryUtil.addQueryComponent(kb, slots, defaultSlot, queriesListPanel);
 	}
@@ -379,9 +389,10 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 	 */
 	public void doSearch() {
 		btnSearch.setEnabled(false);
-		resultsComponent.setHeaderLabel(SEARCH_RESULTS + "  (performing search...)");
+		resultsComponent.setHeaderLabel(SEARCH_IN_PROGRESS);
 		final Cursor oldCursor = getCursor();
 		setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
+		lstResults.setListData(new String[] { SEARCHING_ITEM }); 
 
 		// start searching in a new thread
 		SwingUtilities.invokeLater(new Runnable() {
@@ -391,13 +402,14 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 				try {
 					Query query = QueryUtil.getQueryFromListPanel(queriesListPanel, btnAndQuery.isSelected());
 					hits = doQuery(query);
+					setViewButtonsEnabled((hits > 0));
 				} catch (InvalidQueryException e) {
 					System.err.println("Invalid query: " + e.getMessage());
 					error = true;
 				} catch (Exception ex) {
 					// IOException happens for "sounds like" queries when the ontology hasn't been indexed
 					final String msg = "An exception occurred during the query.\n" + 
-						"This probably happened because this ontology is not indexed yet.\n" + ex.getMessage();
+						"This possibly happened because this ontology hasn't been indexed.\n" + ex.getMessage();
 					JOptionPane.showMessageDialog(AdvancedQueryPlugin.this, msg, "Error", JOptionPane.ERROR_MESSAGE);
 					error = true;
 				} finally {
