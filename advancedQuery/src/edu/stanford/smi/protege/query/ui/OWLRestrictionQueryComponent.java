@@ -61,6 +61,7 @@ public class OWLRestrictionQueryComponent extends QueryComponent {
 	 * Gets all the {@link RDFProperty} objects from the {@link OWLModel} and builds a collection
 	 * of {@link OWLProperty}s which are returned (down-casted to {@link Slot}s).
 	 */
+	@SuppressWarnings("unchecked")
 	private static Collection<Slot> collectOWLProperties(OWLModel model) {
 		Collection rdfProps = model.getRDFProperties();
 		Collection<Slot> slots = new HashSet<Slot>(rdfProps.size());

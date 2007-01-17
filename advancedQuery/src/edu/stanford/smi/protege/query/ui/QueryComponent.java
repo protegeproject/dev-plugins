@@ -40,6 +40,8 @@ import edu.stanford.smi.protege.util.JNumberTextField;
 import edu.stanford.smi.protege.util.LabeledComponent;
 import edu.stanford.smi.protege.util.ModalDialog;
 import edu.stanford.smi.protege.util.ModalDialog.CloseCallback;
+import edu.stanford.smi.protegex.owl.model.OWLModel;
+import edu.stanford.smi.protegex.owl.ui.ProtegeUI;
 
 /**
  * Holds the query items - the selected {@link Cls}, {@link Slot}, type, and expression.
@@ -211,6 +213,12 @@ public class QueryComponent extends JPanel {
 		// set the default slot (e.g. :NAME)
 		if ((defaultSlot != null) && slots.contains(defaultSlot)) {
 			getSelectSlotComponent().setObject(defaultSlot);
+		} else if (slots.size() > 0) {
+			getSelectSlotComponent().setObject(slots.iterator().next());
+		} else {
+			// if all else fails - use the :NAME slot
+			// but what is :NAME isn't in the list of available slots?!?
+			getSelectSlotComponent().setObject(kb.getNameSlot());
 		}
 	}
 
@@ -222,7 +230,7 @@ public class QueryComponent extends JPanel {
 		typesToComponentMap.clear();
 		QueryListComponent clsComp = new QueryListComponent("", kb);
 		clsComp.setActions(createViewAction(clsComp, "View Cls", Icons.getViewClsIcon()),
-						   createSelectClsAction(clsComp, "Select Cls", Icons.getAddClsIcon(), false),
+						   createSelectClsAction(clsComp, "Select Cls", Icons.getAddClsIcon()),
 						   createRemoveAction(clsComp, "Remove Cls", Icons.getRemoveClsIcon()));
 		typesToComponentMap.put(ValueType.CLS, clsComp);
 
@@ -306,7 +314,7 @@ public class QueryComponent extends JPanel {
 		if (selectCls == null) {
 			selectCls = new QueryListComponent("Class", kb);
 			selectCls.setActions(createViewAction(selectCls, "View Cls", Icons.getViewClsIcon()),
-								 createSelectClsAction(selectCls, "Select Cls", Icons.getAddClsIcon(), true),
+								 createSelectClsAction(selectCls, "Select Cls", Icons.getAddClsIcon()),
 								 createRemoveAction(selectCls, "Remove Cls", Icons.getRemoveClsIcon()));
 			selectCls.addListener(clsListener);
 		}
@@ -380,7 +388,10 @@ public class QueryComponent extends JPanel {
         return action;
     }
     
-	protected Action createSelectClsAction(final QueryListComponent comp, final String name, Icon icon, final boolean updateSlotComponent) {
+	/**
+	 * Creates an action that will display a popup dialog that lets the user choose a cls.
+	 */
+	protected Action createSelectClsAction(final QueryListComponent comp, final String name, Icon icon) {
 		return new AbstractAction(name, icon) {
 			public void actionPerformed(ActionEvent e) {
 				Cls cls = DisplayUtilities.pickCls(comp, kb, kb.getRootClses(), name);
@@ -392,12 +403,29 @@ public class QueryComponent extends JPanel {
 		};
 	}
 	
+	/**
+	 * Creates an action that will popup up a dialog letting the user choose an instance 
+	 * (or possibility a cls if the project is an OWL project).
+	 */
 	protected Action createSelectInstanceAction(final QueryListComponent comp, final String name, Icon icon) {
 		return new AbstractAction(name, icon) {
+			@SuppressWarnings("unchecked")
 			public void actionPerformed(ActionEvent e) {
 				Slot slot = (Slot) selectSlot.getObject();
 				Collection clses = (slot == null ? kb.getRootClses() : slot.getAllowedClses());
-				Instance inst = DisplayUtilities.pickInstance(comp, clses);
+				Instance inst = null;
+				// For OWL projects - allow the user to select an instance OR a class
+				if (kb instanceof OWLModel) {
+					if (clses.isEmpty()) {
+						clses = kb.getRootClses();
+					}
+					// using this resource chooser lets the user choose an instance or a cls
+					// in the NCI there are no instances but some slots are still of value type 'Instance'
+					inst = ProtegeUI.getSelectionDialogFactory().selectResourceByType(comp, (OWLModel) kb, clses);
+				} else {
+					// this only lets users choose an instance
+					inst = DisplayUtilities.pickInstance(comp, clses);
+				}
 				// if the user pressed cancel then inst will be null
 				if (inst != null) {
 					comp.setObject(inst);
@@ -507,6 +535,7 @@ public class QueryComponent extends JPanel {
 
 	/** Listens for when a slot is selected and updates the types combobox and value component. */
 	private QueryListComponentListener slotListener = new QueryListComponentListener() {
+		@SuppressWarnings("unchecked")
 		public void valueChanged(Object value) {
 			DefaultComboBoxModel model = getTypesModel();
 			// remove the old value component
