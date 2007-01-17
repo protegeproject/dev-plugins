@@ -12,7 +12,6 @@ import edu.stanford.smi.protege.ui.ProjectView;
 import edu.stanford.smi.protege.util.Selectable;
 import edu.stanford.smi.protege.util.ViewAction;
 import edu.stanford.smi.protege.widget.TabWidget;
-import gov.nih.nci.protegex.edit.NCIEditTab;
 
 /**
  * This action is used to show the {@link NCIEditTab} and select a {@link Cls} in the tree.
