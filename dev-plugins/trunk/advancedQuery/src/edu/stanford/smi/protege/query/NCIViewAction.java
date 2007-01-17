@@ -37,7 +37,6 @@ public class NCIViewAction extends ViewAction {
 			Class.forName(NCITAB);
 		} catch (Throwable t) {
 			valid = false;
-			t.printStackTrace();
 		}
 		return valid;
 	}
