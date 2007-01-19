@@ -1,6 +1,7 @@
 package edu.stanford.smi.protege.query.ui;
 
 import java.awt.BorderLayout;
+import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.InputEvent;
@@ -9,6 +10,8 @@ import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 
 import javax.swing.Action;
@@ -19,51 +22,39 @@ import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.JToolBar;
+import javax.swing.JTree;
 import javax.swing.SwingUtilities;
 import javax.swing.event.PopupMenuEvent;
 import javax.swing.event.PopupMenuListener;
 import javax.swing.tree.TreePath;
 
+import edu.stanford.smi.protege.model.Cls;
 import edu.stanford.smi.protege.model.KnowledgeBase;
+import edu.stanford.smi.protege.model.ModelUtilities;
 import edu.stanford.smi.protege.model.Project;
 import edu.stanford.smi.protege.model.WidgetDescriptor;
 import edu.stanford.smi.protege.query.AdvancedQueryPlugin;
 import edu.stanford.smi.protege.resource.ResourceKey;
 import edu.stanford.smi.protege.util.ComponentFactory;
+import edu.stanford.smi.protege.util.ComponentUtilities;
 import edu.stanford.smi.protege.util.Disposable;
+import edu.stanford.smi.protege.util.LabeledComponent;
 import edu.stanford.smi.protege.util.Log;
 import edu.stanford.smi.protege.util.StandardAction;
-import edu.stanford.smi.protege.util.WaitCursor;
-
-import javax.swing.*;
-import java.awt.Dimension;
-
-import edu.stanford.smi.protege.util.LabeledComponent;
-import edu.stanford.smi.protegex.owl.ui.dialogs.ModalDialogFactory;
 import edu.stanford.smi.protegex.owl.ui.ProtegeUI;
-
-import edu.stanford.smi.protege.model.Cls;
-import java.util.Collection;
-import java.util.Iterator;
-
-import edu.stanford.smi.protege.model.ModelUtilities;
-import edu.stanford.smi.protege.util.ComponentUtilities;
-
-import edu.stanford.smi.protege.util.SuperclassTraverser;
+import edu.stanford.smi.protegex.owl.ui.dialogs.ModalDialogFactory;
 
 
 /**
- * This class instantiates the Advanced Quert Plugin, so that it can be called
+ * This class instantiates the Advanced Query Plugin, so that it can be called
  * as a finder component, not as a tab widget.
  * This class is implemented as a singleton.
+ * 
  * @author Tania Tudorache
- *
  */
 public class QueryTreeFinderPanel extends JPanel implements Disposable {
 
 	private static final String ADVANCED_QUERY_JAVA_CLASS = "edu.stanford.smi.protege.query.AdvancedQueryPlugin";
-
-	private static QueryTreeFinderPanel queryTreeFinderPanel = null;
 
 	private KnowledgeBase kb;
 
@@ -71,7 +62,7 @@ public class QueryTreeFinderPanel extends JPanel implements Disposable {
 
 	private AdvancedQueryPlugin advanceQueryTabWidget;
 
-	private static List searchedForStrings = new ArrayList();
+	private static List<String> searchedForStrings = new ArrayList<String>();
 
 	private JComboBox _comboBox;
 
@@ -134,6 +125,9 @@ public class QueryTreeFinderPanel extends JPanel implements Disposable {
 
 			if (text != null && text.length() > 0)
 				advanceQueryTabWidget.doSearch();
+
+			// 011907 KLO
+			advanceQueryTabWidget.setViewButtonsVisible(false);
 
 			LabeledComponent lc = new LabeledComponent("", advanceQueryTabWidget);
 			lc.setPreferredSize(new Dimension(750, 350));
