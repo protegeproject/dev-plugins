@@ -69,7 +69,7 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 
 	private static final long serialVersionUID = -5589620508506925170L;
 
-	public static final Operation INDEX_OPERATION = new OperationImpl("Generate Lucene Indicies");
+	public static final Operation INDEX_OPERATION = new OperationImpl("Generate Lucene Indices");
 
 	private KnowledgeBase kb;
 	private Collection<Slot> slots;

@@ -33,8 +33,6 @@ import edu.stanford.smi.protege.util.Disposable;
 import edu.stanford.smi.protege.util.Log;
 import edu.stanford.smi.protege.util.StandardAction;
 
-import javax.swing.JDialog;
-
 /**
  * This class instantiates the Advanced Quert Plugin, so that it can be called
  * as a finder component, not as a tab widget.
@@ -54,7 +52,7 @@ public class QueryTreeFinderComponent extends JPanel implements Disposable {
 
 	private AdvancedQueryPlugin advanceQueryTabWidget;
 
-	private static List searchedForStrings = new ArrayList();
+	private static List<String> searchedForStrings = new ArrayList<String>();
 
 	private JComboBox _comboBox;
 
@@ -229,7 +227,7 @@ public class QueryTreeFinderComponent extends JPanel implements Disposable {
 	}
 
 
-    private void bringFrameToFront() {
+    protected void bringFrameToFront() {
         if (frame != null && frame.isVisible()) {
             SwingUtilities.invokeLater(new Runnable() {
                 public void run() {
