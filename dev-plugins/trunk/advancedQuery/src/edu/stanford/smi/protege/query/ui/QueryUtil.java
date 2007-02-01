@@ -32,6 +32,7 @@ public final class QueryUtil {
 	 * @return {@link Query} or null if no query was valid
 	 * @throws InvalidQueryException if one of the query objects is invalid
 	 */
+	@SuppressWarnings("unchecked")
 	public static Query getQueryFromListPanel(ListPanel listPanel, boolean andQuery) throws InvalidQueryException {
 		Query query = null;
 		Collection<JPanel> panels = listPanel.getPanels();
@@ -53,8 +54,7 @@ public final class QueryUtil {
 	
 	public static void addQueryComponent(KnowledgeBase kb, Collection<Slot> slots, Slot defaultSlot, ListPanel listPanel) {
 		addQueryComponent(kb, slots, defaultSlot, listPanel, "");
-	}
-	
+	}	
 	
 	/**
 	 * Adds a new query component to the {@link ListPanel}.
