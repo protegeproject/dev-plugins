@@ -84,6 +84,9 @@ public class QueryComponent extends JPanel {
 	private ValueType currentValueType = null;
 	protected final Slot defaultSlot;
 	
+	// this flag must be set to true for view (slot/cls/instance) actions to appear
+	private boolean allowViewActions = false;
+	
 	/**
 	 * Initializes this component with the given {@link KnowledgeBase} and selectable {@link Slot}s.
 	 * The Name Slot (:NAME) is used as the default Slot.
@@ -377,14 +380,20 @@ public class QueryComponent extends JPanel {
 		return cmbModelTypes;
 	}
 		
-	/** Creates an action used to view a Frame.  Initially disabled. */
+	/** 
+	 * Creates an action used to view a Frame.  Initially disabled.
+	 * Returns null if allowViewActions is false. 
+	 */
 	protected Action createViewAction(final QueryListComponent comp, String name, Icon icon) {
-        Action action = new AbstractAction(name, icon) {
-            public void actionPerformed(ActionEvent event) {
-            	comp.viewObject();
-            }
-        };
-        action.setEnabled(false);
+        Action action = null;
+        if (allowViewActions) {
+	        action = new AbstractAction(name, icon) {
+	            public void actionPerformed(ActionEvent event) {
+	            	comp.viewObject();
+	            }
+	        };
+	        action.setEnabled(false);
+        }
         return action;
     }
     

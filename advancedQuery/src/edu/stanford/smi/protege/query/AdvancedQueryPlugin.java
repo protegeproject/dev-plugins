@@ -404,14 +404,17 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 					hits = doQuery(query);
 					setViewButtonsEnabled((hits > 0));
 				} catch (InvalidQueryException e) {
-					System.err.println("Invalid query: " + e.getMessage());
+					final String msg = "Invalid query: " + e.getMessage();
+					System.err.println(msg);
 					error = true;
+					lstResults.setListData(new String[] { msg }); 
 				} catch (Exception ex) {
 					// IOException happens for "sounds like" queries when the ontology hasn't been indexed
 					final String msg = "An exception occurred during the query.\n" + 
 						"This possibly happened because this ontology hasn't been indexed.\n" + ex.getMessage();
 					JOptionPane.showMessageDialog(AdvancedQueryPlugin.this, msg, "Error", JOptionPane.ERROR_MESSAGE);
 					error = true;
+					lstResults.setListData(new String[] { "An exception occurred during the query." }); 
 				} finally {
 					setCursor(oldCursor);
 					btnSearch.setEnabled(true);

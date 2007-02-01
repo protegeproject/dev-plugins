@@ -65,7 +65,9 @@ public class QueryListComponent extends QueryLabeledComponent {
 	public void setActions(Action viewAction, Action selectAction, Action removeAction) {
 		this.viewAction = viewAction;
 		addHeaderButton(viewAction);
-		lst.addMouseListener(new DoubleClickActionAdapter(viewAction));
+		if (viewAction != null) {
+			lst.addMouseListener(new DoubleClickActionAdapter(viewAction));
+		}
 		this.selectAction = selectAction;
 		addHeaderButton(selectAction);
 		this.removeAction = removeAction;
