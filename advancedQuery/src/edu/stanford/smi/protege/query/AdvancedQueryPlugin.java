@@ -77,8 +77,8 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 	private boolean isOWL;
 	private Slot defaultSlot = null;
 	
-	private ViewAction editAction;
 	private ViewAction viewAction;
+	private ViewAction editAction;
 	private JButton viewButton;
 	private JButton editButton;
 
@@ -163,8 +163,8 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 		resultsComponent = new LabeledComponent(SEARCH_RESULTS, new JScrollPane(lst), true);
 		resultsComponent.setFooterComponent(new ListFinder(lst, "Find Instance"));
 
-		viewButton = resultsComponent.addHeaderButton(getViewAction());	// won't be null
-		editButton = resultsComponent.addHeaderButton(getEditAction());	// might be null
+		viewButton = resultsComponent.addHeaderButton(getEditAction());	// won't be null
+		editButton = resultsComponent.addHeaderButton(getViewAction());	// might be null
 		
 		JSplitPane splitter = ComponentFactory.createLeftRightSplitPane();
 		splitter.setLeftComponent(lcLeft);
@@ -172,27 +172,27 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
         add(splitter, BorderLayout.CENTER);
 	}
 	
+	private Action getEditAction() {
+		if (editAction == null) {
+			if (NCIEditAction.isValid()) {
+				// Add action for showing the selected cls in NCI Edit Tab
+				editAction = new NCIEditAction("Edit Cls in the NCI Edit Tab", lstResults, Icons.getViewClsIcon());
+			}
+			// null otherwise
+		}
+		return editAction;
+	}
+	
 	private Action getViewAction() {
 		if (viewAction == null) {
 			if (NCIViewAction.isValid()) {
-				// Add action for showing in NCI Edit Tab
-				viewAction = new NCIViewAction("View Cls in the NCI Edit Tab", lstResults, Icons.getViewClsIcon());
+				viewAction = new NCIViewAction("View Cls", lstResults, Icons.getViewInstanceIcon());
 			} else {
 				// add the default view instance action
 				viewAction = new DefaultInstanceViewAction("View Instance", lstResults, Icons.getViewClsIcon(), kb);
 			}
 		}
 		return viewAction;
-	}
-	
-	private Action getEditAction() {
-		if (editAction == null) {
-			if (NCIEditAction.isValid()) {
-				editAction = new NCIEditAction("Edit Cls", lstResults, Icons.getViewInstanceIcon());
-			}
-			// null otherwise
-		}
-		return editAction;
 	}
 
 	/**
@@ -305,7 +305,7 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 		if (lstResults == null) {
 	        lstResults = ComponentFactory.createSelectableList(null, false);
 	        lstResults.setCellRenderer(frameRenderer);
-	        lstResults.addMouseListener(new DoubleClickActionAdapter(getViewAction()));
+	        lstResults.addMouseListener(new DoubleClickActionAdapter(getEditAction()));
 		}
 		return lstResults;
 	}
@@ -348,11 +348,11 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 	 * Enables or disables the view and edit buttons in the top right corner of the results panel.
 	 */
 	public void setViewButtonsEnabled(boolean enabled) {
-		if (getViewAction() != null) {
-			getViewAction().setEnabled(enabled);
-		}
 		if (getEditAction() != null) {
 			getEditAction().setEnabled(enabled);
+		}
+		if (getViewAction() != null) {
+			getViewAction().setEnabled(enabled);
 		}
 	}
 
