@@ -1,5 +1,8 @@
 <?xml version = "1.0" encoding = "utf-8"?>
 <project name = "Query Plugin" default = "dist" basedir = ".">    
+   <property environment="env"/>
+   <property name="protege.home" value="${env.PROTEGE_HOME}"/>
+
    <property name = "src" value = "./src"/>  
    <property name = "classes" value = "./classes"/>  
    <property name = "plugins" value = "../plugins"/>
@@ -7,15 +10,69 @@
    <property name = "junit" value = "./junit"/>
    <property name = "plugin_dist" value = "edu.stanford.smi.protege.advancedQuery"/>
    <property name = "pluginName" value = "advancedQueryPlugin"/>
-	
-   <path id = "project.classpath">    
-     <pathelement location = "${lib}/protege.jar"/>
-     <pathelement location = "${lib}/protege-owl.jar"/>
-     <pathelement location = "./lib/lucene-core-2.0.1-dev.jar"/>
-     <pathelement location = "./lib/phonetix-0.2.jar"/>
-     <pathelement location = "./lib/nciedittab.jar"/>
-   </path>
 
+
+    <!-- 
+       #  ********** Finding Protege Libraries. *************
+       # 
+       #  We are using an approach that allows developers to decide
+       #  whether to hand copy the needed jars into the lib directory or
+       #  to point them to a protege installation.
+      -->
+    <target name="checkProtegeHome">
+      <condition property="protege.home.set">
+        <available file="${protege.home}/protege.jar" type="file"/>
+      </condition>
+    </target>
+    
+    <target name="useProtegeHome" depends="checkProtegeHome" 
+            if="protege.home.set">
+      <echo message="Using Protege Home = ${protege.home} to find protege jars"/>
+      <property name="protege.lib" value="${protege.home}/protege.jar"/>
+      <property name="owl.lib"     value="${protege.home}/plugins/edu.stanford.smi.protegex.owl/protege-owl.jar"/>
+    </target>
+    
+    <target name="useLibDir" depends="checkProtegeHome" 
+            unless="protege.home.set">
+       <echo message="Using lib dir to find protege jars"/>
+      <property name="protege.lib" value="${lib}/protege.jar"/>
+      <property name="owl.lib" value="${lib}/protege-owl.jar"/>
+    </target>
+
+
+    <target name = "checkProtegeLibs" depends="useProtegeHome, useLibDir">
+      <condition property="libs.found">
+        <and>
+          <available file="${protege.lib}" type = "file"/>
+          <available file="${owl.lib}" type = "file"/>
+        </and>
+      </condition>
+      <path id = "project.classpath">    
+        <pathelement location = "${protege.lib}"/>
+        <pathelement location = "${owl.lib}"/>
+        <pathelement location = "./lib/lucene-core-2.0.1-dev.jar"/>
+        <pathelement location = "./lib/phonetix-0.2.jar"/>
+        <pathelement location = "./lib/nciedittab.jar"/>
+      </path>
+
+    </target>
+
+    <target name="checkProtegeLibsAndReport" depends="checkProtegeLibs"
+            unless="libs.found">
+      <echo message="Missing protege libraries.  You can either "/>
+      <echo message="set the PROTEGE_HOME environment variable to a"/>
+      <echo message="protege installation directory where the"/>
+      <echo message="appropriate plugins have been installed or copy the"/>
+      <echo message="needed jars into the lib directory"/>
+      <echo message="The jar file in question is protege.jar."/>
+      <fail message="build aborted."/>
+    </target>
+      
+   <!-- 
+     #  ********** Finding Protege Libraries Done. *************
+     -->
+
+	
    <target name = "init">
      <mkdir dir = "${classes}"/>
      <mkdir dir = "${plugins}"/>
@@ -23,7 +80,7 @@
    </target>  
 
 
-   <target name = "compile" depends = "init">    
+   <target name = "compile" depends = "init, checkProtegeLibsAndReport">    
      <javac srcdir = "${src}" destdir = "${classes}" debug="on">
        <classpath refid = "project.classpath"/>    
      </javac>
@@ -50,24 +107,22 @@
           destfile = "${plugins}/${pluginName}.zip"/>
    </target>
 
-
    <target name = "install" depends = "dist">
-      <fail message = "set the protege.dir variable to do an install">
+      <fail message = "set the protege.home variable to do an install">
          <condition>
             <not>
                <and>
-                  <isset property="protege.dir"/>
-                  <available file="${protege.dir}"
+                  <isset property="protege.home"/>
+                  <available file="${protege.home}"
                              type="dir"/>
                </and>
             </not>
          </condition>
       </fail>
       <unzip src="${plugins}/${pluginName}.zip" 
-             dest = "${protege.dir}/plugins"
+             dest = "${protege.home}/plugins"
              overwrite = "true"/>
    </target>
-
 
    <target name = "junit-compile" depends = "compile">    
      <javac srcdir = "${junit}" destdir = "${classes}" debug="on">
@@ -109,7 +164,7 @@
             dir = ".." fork = "yes">
         <classpath>
            <pathelement location="${classes}"/>
-           <pathelement location = "${lib}/protege.jar"/>
+           <pathelement location = "${protege.lib}"/>
            <pathelement location = "./lib/lucene-core-2.0.1-dev.jar"/>
            <pathelement location = "./lib/phonetix-0.2.jar"/>
            <fileset
