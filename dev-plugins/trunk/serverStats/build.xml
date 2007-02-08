@@ -10,8 +10,6 @@
    <property name = "server_plugin_dist" value = "edu.stanford.smi.protege.server"/>
    <property name = "pluginName" value="server_plugin"/>
 
-   <property name = "protege.dir" value="/Users/tredmond/dev/Protege_3.2"/>
-
     <!-- 
        #  ********** Finding Protege Libraries. *************
        # 
