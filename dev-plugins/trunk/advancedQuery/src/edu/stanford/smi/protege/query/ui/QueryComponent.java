@@ -35,6 +35,7 @@ import edu.stanford.smi.protege.query.querytypes.OwnSlotValueQuery;
 import edu.stanford.smi.protege.query.querytypes.PhoneticQuery;
 import edu.stanford.smi.protege.resource.Icons;
 import edu.stanford.smi.protege.ui.DisplayUtilities;
+import edu.stanford.smi.protege.util.AdvancedQueryPluginDefaults;
 import edu.stanford.smi.protege.util.Assert;
 import edu.stanford.smi.protege.util.JNumberTextField;
 import edu.stanford.smi.protege.util.LabeledComponent;
@@ -50,16 +51,16 @@ import edu.stanford.smi.protegex.owl.ui.ProtegeUI;
  */
 public class QueryComponent extends JPanel {
 	
-	private static final String EXACT_MATCH = "exact match";
-	private static final String CONTAINS = "contains";
-	private static final String STARTS_WITH = "starts with";
-	private static final String ENDS_WITH = "ends with";
-	private static final String SOUNDS_LIKE = "sounds like";
-	private static final String IS = "is";
-	private static final String GREATER_THAN = "greater than";
-	private static final String LESS_THAN = "less than";
-	private static final String TRUE = "true";
-	private static final String FALSE = "false";
+	public static final String EXACT_MATCH = "exact match";
+	public static final String CONTAINS = "contains";
+	public static final String STARTS_WITH = "starts with";
+	public static final String ENDS_WITH = "ends with";
+	public static final String SOUNDS_LIKE = "sounds like";
+	public static final String IS = "is";
+	public static final String GREATER_THAN = "greater than";
+	public static final String LESS_THAN = "less than";
+	public static final String TRUE = "true";
+	public static final String FALSE = "false";
 	private static final String[] NULL = { "" };
 	
 	private Map<ValueType, String[]> typesMap;
@@ -366,10 +367,25 @@ public class QueryComponent extends JPanel {
 	
 	private JComboBox getTypesComboBox() {
 		if (cmbTypes == null) {
-			cmbTypes = new JComboBox(getTypesModel());
-			cmbTypes.setSelectedIndex(0);
+			cmbTypes = new JComboBox(getTypesModel());	
+			
+			selectDefaultSearchType();
 		}
 		return cmbTypes;
+	}
+
+	private void selectDefaultSearchType() {
+		if (currentValueType == null) {
+			cmbTypes.setSelectedIndex(0);
+		} else {
+			String defaultSearchType = AdvancedQueryPluginDefaults.getDefaultSearchType(currentValueType);
+			
+			if (defaultSearchType != null) {
+				cmbTypes.setSelectedItem(defaultSearchType);
+			} else {
+				cmbTypes.setSelectedIndex(0);
+			}
+		}
 	}
 	
 	private DefaultComboBoxModel getTypesModel() {
@@ -567,6 +583,8 @@ public class QueryComponent extends JPanel {
 					for (int i = 0; i < types.length; i++) {
 						model.addElement(types[i]);
 					}
+					
+					selectDefaultSearchType();
 	
 					// load the symbol values
 					if (ValueType.SYMBOL.equals(type)) {
@@ -581,6 +599,7 @@ public class QueryComponent extends JPanel {
 					valueComponent.reset();
 				}
 			}
+			
 			valueComponent.setBackground(pnlQueryComponents.getBackground());
 			pnlQueryComponents.add(valueComponent);
 			pnlQueryComponents.revalidate();
