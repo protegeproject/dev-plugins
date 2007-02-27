@@ -25,9 +25,11 @@ import javax.swing.event.PopupMenuListener;
 
 import edu.stanford.smi.protege.model.KnowledgeBase;
 import edu.stanford.smi.protege.model.Project;
+import edu.stanford.smi.protege.model.Slot;
 import edu.stanford.smi.protege.model.WidgetDescriptor;
 import edu.stanford.smi.protege.query.AdvancedQueryPlugin;
 import edu.stanford.smi.protege.resource.ResourceKey;
+import edu.stanford.smi.protege.util.AdvancedQueryPluginDefaults;
 import edu.stanford.smi.protege.util.ComponentFactory;
 import edu.stanford.smi.protege.util.Disposable;
 import edu.stanford.smi.protege.util.Log;
@@ -106,8 +108,11 @@ public class QueryTreeFinderComponent extends JPanel implements Disposable {
 			frame.getContentPane().add(advanceQueryTabWidget);
 			frame.pack();
 		}
-		advanceQueryTabWidget.setQueryComponent(null, text);
+		Slot defaultSearchSlot = kb.getSlot(AdvancedQueryPluginDefaults.getDefaultSearchSlotName());
+		advanceQueryTabWidget.setDefaultSlot(defaultSearchSlot);
 		
+		advanceQueryTabWidget.setQueryComponent(null, text);
+				
 		//hack to bring frame to front if hidden by other window
 		frame.setVisible(false);
 		frame.setVisible(true);	
