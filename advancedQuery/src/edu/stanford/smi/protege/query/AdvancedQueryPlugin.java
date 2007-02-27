@@ -40,6 +40,7 @@ import edu.stanford.smi.protege.server.framestore.RemoteClientFrameStore;
 import edu.stanford.smi.protege.server.metaproject.Operation;
 import edu.stanford.smi.protege.server.metaproject.impl.OperationImpl;
 import edu.stanford.smi.protege.ui.ListFinder;
+import edu.stanford.smi.protege.util.AdvancedQueryPluginDefaults;
 import edu.stanford.smi.protege.util.ComponentFactory;
 import edu.stanford.smi.protege.util.ComponentUtilities;
 import edu.stanford.smi.protege.util.DoubleClickActionAdapter;
@@ -66,7 +67,7 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 	public static final String SEARCHING_ITEM = "Searching...";
 	private static final String SEARCH_RESULTS = "Search Results";
 	private static final String SEARCH_IN_PROGRESS = "Search Results (search in progress)";
-
+	
 	private static final long serialVersionUID = -5589620508506925170L;
 
 	public static final Operation INDEX_OPERATION = new OperationImpl("Generate Lucene Indices");
@@ -112,9 +113,8 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 
 		// determine if current project is an OWL project, if so collect OWLProperty values
 		this.isOWL = (kb instanceof OWLModel);
-		
-        // TODO determine default slot, from properties file?
-		this.defaultSlot = kb.getSlot("Preferred_Name");
+		        
+		this.defaultSlot = kb.getSlot(AdvancedQueryPluginDefaults.getDefaultSearchSlotName());
 		if (defaultSlot == null) {
         	defaultSlot = kb.getNameSlot();
 		}
@@ -448,4 +448,21 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 		return hits;
 	}
 
+	public Slot getDefaultSlot() {
+		return defaultSlot;
+	}
+
+	public void setDefaultSlot(Slot defaultSlot) {
+		if (defaultSlot == null) {
+			defaultSlot = kb.getSlot(AdvancedQueryPluginDefaults.DEFAULT_SLOT_NAME);
+		}
+		
+		if (defaultSlot == null) {
+			this.defaultSlot = kb.getNameSlot();
+		} else {
+			this.defaultSlot = defaultSlot;
+		}
+	
+	}
+	
 }
