@@ -205,16 +205,19 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 		final JProgressButton btnProgress = new JProgressButton();
 		Action action = new AbstractAction("Index Ontology") {
 			public void actionPerformed(ActionEvent buttonPushed) {
-				btnProgress.showProgressBar("Indexing...");
-				new Thread(new Runnable() {
-					public void run() {
-					  try {
-						new IndexOntologies(kb).execute();
-					  } finally {
-						btnProgress.hideProgressBar();
-					  }
-					}
-				}).start();
+				int choice = JOptionPane.showConfirmDialog(btnProgress, "Are you sure you want to index this ontology?", "Confirm", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+				if (choice == JOptionPane.YES_OPTION) {
+					btnProgress.showProgressBar("Indexing...");
+					new Thread(new Runnable() {
+						public void run() {
+						  try {
+							new IndexOntologies(kb).execute();
+						  } finally {
+							btnProgress.hideProgressBar();
+						  }
+						}
+					}).start();
+				}
 		    }
 		};
 		btnProgress.setAction(action);
