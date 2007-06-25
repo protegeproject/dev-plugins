@@ -447,6 +447,7 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 		} else {
 			frameRenderer.setQuery(q);		// bold the matching results 
 			lstResults.setListData(new Vector<Frame>(results));
+			lstResults.setSelectedIndex(0);
 		}
 		return hits;
 	}
