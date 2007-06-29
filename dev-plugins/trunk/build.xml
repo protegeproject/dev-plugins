@@ -1,5 +1,5 @@
 <?xml version = "1.0" encoding = "utf-8"?>
-<project name = "Developer Plugins" default = "compile" basedir = ".">
+<project name = "Developer Plugins" default = "all" basedir = "." >
 
    <target name="advancedQuery">
      <ant dir="./advancedQuery" target="dist"/>
