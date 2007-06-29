@@ -113,11 +113,8 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 
 		// determine if current project is an OWL project, if so collect OWLProperty values
 		this.isOWL = (kb instanceof OWLModel);
-		        
-		this.defaultSlot = kb.getSlot(AdvancedQueryPluginDefaults.getDefaultSearchSlotName());
-		if (defaultSlot == null) {
-        	defaultSlot = kb.getNameSlot();
-		}
+
+		setDefaultSlot(kb.getSlot(AdvancedQueryPluginDefaults.getDefaultSearchSlotName()));
 		       
         // add UI components
 		createGUI();
