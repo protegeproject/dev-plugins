@@ -32,7 +32,7 @@ import edu.stanford.smi.protege.util.ModalDialog;
  * @author Chris Callendar
  * @date 7-Nov-06
  */
-public class QueryFrameRenderer extends FrameRenderer {
+public class QueryFrameRenderer extends FrameRenderer implements QueryRenderer {
 
 	private String queryString;	
 	private Pattern pattern;
@@ -57,50 +57,50 @@ public class QueryFrameRenderer extends FrameRenderer {
 		this.oldColor = null;
 	}
 	
-	/**
-	 * Sets the color to use for matched strings.
-	 * If null then the string is painted with same color (default).
-	 * @param c the color to paint matched strings
+	/* (non-Javadoc)
+	 * @see edu.stanford.smi.protege.query.QueryRenderer#setMatchColor(java.awt.Color)
 	 */
 	public void setMatchColor(Color c) {
 		this.matchColor = c;
 	}
 	
+	/* (non-Javadoc)
+	 * @see edu.stanford.smi.protege.query.QueryRenderer#getMatchColor()
+	 */
 	public Color getMatchColor() {
 		return matchColor;
 	}
 	
-	/**
-	 * Sets the color to use for the "Searching..." string.
-	 * If null then the string is painted with same color (default).
-	 * @param c the color to paint the "Searching..." string
+	/* (non-Javadoc)
+	 * @see edu.stanford.smi.protege.query.QueryRenderer#setSearchColor(java.awt.Color)
 	 */
 	public void setSearchColor(Color c) {
 		this.searchColor = c;
 	}
 	
+	/* (non-Javadoc)
+	 * @see edu.stanford.smi.protege.query.QueryRenderer#getSearchColor()
+	 */
 	public Color getSearchColor() {
 		return searchColor;
 	}	
 	
-	/**
-	 * Sets whether matches should be painted using a bold font.
-	 * This is true by default.
+	/* (non-Javadoc)
+	 * @see edu.stanford.smi.protege.query.QueryRenderer#setBoldMatches(boolean)
 	 */
 	public void setBoldMatches(boolean useBolding) {
 		this.bold = useBolding;
 	}
 	
+	/* (non-Javadoc)
+	 * @see edu.stanford.smi.protege.query.QueryRenderer#isBoldMatches()
+	 */
 	public boolean isBoldMatches() {
 		return bold;
 	}
 	
-	/**
-	 * Sets the query string based on the {@link Query}.
-	 * At the moment {@link OWLRestrictionQuery} are not dealt with.
-	 * If the query is an {@link OrQuery} or an {@link AndQuery}
-	 * then each query string is combined together.  
-	 * @param q the query
+	/* (non-Javadoc)
+	 * @see edu.stanford.smi.protege.query.QueryRenderer#setQuery(edu.stanford.smi.protege.model.query.Query)
 	 */
 	public void setQuery(Query q) {
 		if (q instanceof AndQuery) {
@@ -125,11 +125,8 @@ public class QueryFrameRenderer extends FrameRenderer {
 		}
 	}
 	
-	/**
-	 * Sets the query string to use.  This will be 
-	 * matched against any text that is rendered and the matching
-	 * parts will be highlighted.
-	 * @param string
+	/* (non-Javadoc)
+	 * @see edu.stanford.smi.protege.query.QueryRenderer#setQueryString(java.lang.String)
 	 */
 	public void setQueryString(String string) {
 		if (string != null) {
