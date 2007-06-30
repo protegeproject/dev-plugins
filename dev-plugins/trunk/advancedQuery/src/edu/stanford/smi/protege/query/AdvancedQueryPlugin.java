@@ -90,15 +90,13 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 	private JPanel pnlQueryBottom;
 	private JButton btnSearch;
 	private LabeledComponent resultsComponent;
-	private QueryFrameRenderer frameRenderer;
+	private QueryRenderer queryRenderer;
 
 	public AdvancedQueryPlugin() {
 		super();
 		this.canIndex = false;
 		this.isOWL = false;
 		this.slots = Collections.emptySet();
-		this.frameRenderer = new QueryFrameRenderer();
-		this.frameRenderer.setMatchColor(new Color(24, 72, 124));
 	}
 
 	/**
@@ -107,12 +105,16 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 	@SuppressWarnings("unchecked")
 	public void initialize() {
 		this.kb = getKnowledgeBase();
+		
+		// determine if current project is an OWL project, if so collect OWLProperty values
+		this.isOWL = (getKnowledgeBase() instanceof OWLModel);
+				
+		this.queryRenderer = (this.isOWL ? new QueryResourceRenderer() : new QueryFrameRenderer());
+		this.queryRenderer.setMatchColor(new Color(24, 72, 124));
+		
 		InstallNarrowFrameStore frameStore = new InstallNarrowFrameStore(kb);
 		this.canIndex = RemoteClientFrameStore.isOperationAllowed(kb, INDEX_OPERATION);
 		this.slots = (Set) frameStore.execute();
-
-		// determine if current project is an OWL project, if so collect OWLProperty values
-		this.isOWL = (kb instanceof OWLModel);
 
 		setDefaultSlot(kb.getSlot(AdvancedQueryPluginDefaults.getDefaultSearchSlotName()));
 		       
@@ -304,7 +306,7 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 	private SelectableList getResultsList() {
 		if (lstResults == null) {
 	        lstResults = ComponentFactory.createSelectableList(null, false);
-	        lstResults.setCellRenderer(frameRenderer);
+	        lstResults.setCellRenderer(queryRenderer);
 	        lstResults.addMouseListener(new DoubleClickActionAdapter(getEditAction()));
 		}
 		return lstResults;
@@ -439,10 +441,10 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 		}
 		int hits = (results != null ? results.size() : 0);
 		if (hits == 0) {
-			frameRenderer.setQuery(null);	// don't bold anything
+			queryRenderer.setQuery(null);	// don't bold anything
 			lstResults.setListData(new String[] { "No results found." });
 		} else {
-			frameRenderer.setQuery(q);		// bold the matching results 
+			queryRenderer.setQuery(q);		// bold the matching results 
 			lstResults.setListData(new Vector<Frame>(results));
 			lstResults.setSelectedIndex(0);
 		}
