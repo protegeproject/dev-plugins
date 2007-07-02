@@ -18,7 +18,7 @@
     <!-- that people will copy the protege.jar and protege-test.jar files   -->
     <!-- into the protege owl library directory.  This is not a great       -->
     <!-- assumption but I don't know a better one.                          -->
-    <property name = "protegeCoreLib" value = "${lib}/protege.jar"/>
+    <property name = "protegeCoreLib" value = "${protege.home}/protege.jar"/>
 
 
    <path id = "project.classpath">    
