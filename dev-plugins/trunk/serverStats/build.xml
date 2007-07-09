@@ -3,9 +3,10 @@
    <property environment="env"/>
    <property name="protege.home" value="${env.PROTEGE_HOME}"/>
 
+   <property name = "build"   location = "./build"/>
    <property name = "src" value = "./src"/>  
-   <property name = "classes" value = "./classes"/>  
-   <property name = "plugins" value = "../plugins"/>
+   <property name = "classes" value = "${build}/classes"/>  
+   <property name = "plugins" value = "${build}/plugins"/>
    <property name = "lib" value = "../lib"/>
    <property name = "server_plugin_dist" value = "edu.stanford.smi.protege.server"/>
    <property name = "pluginName" value="server_plugin"/>
