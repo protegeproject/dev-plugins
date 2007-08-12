@@ -80,8 +80,8 @@ public class OWLRestrictionQueryComponent extends QueryComponent {
 	}
 
 	@Override
-	protected Query getQueryForType(Slot slot, ValueType type) throws InvalidQueryException {
-		Query query = QueryUtil.getQueryFromListPanel(groupListPanel, btnAndQuery.isSelected());
+	protected Query getQueryForType(Slot slot, ValueType type, int maxMatches) throws InvalidQueryException {
+		Query query = QueryUtil.getQueryFromListPanel(groupListPanel, btnAndQuery.isSelected(), maxMatches);
 		if (query != null) {
 			return new OWLRestrictionQuery(getOWLModel(), (OWLProperty) slot, query);
 		}
