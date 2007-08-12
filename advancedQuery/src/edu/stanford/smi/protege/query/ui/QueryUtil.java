@@ -33,7 +33,7 @@ public final class QueryUtil {
 	 * @throws InvalidQueryException if one of the query objects is invalid
 	 */
 	@SuppressWarnings("unchecked")
-	public static Query getQueryFromListPanel(ListPanel listPanel, boolean andQuery) throws InvalidQueryException {
+	public static Query getQueryFromListPanel(ListPanel listPanel, boolean andQuery, int maxMatches) throws InvalidQueryException {
 		Query query = null;
 		Collection<JPanel> panels = listPanel.getPanels();
 		ArrayList<Query> queries = new ArrayList<Query>(panels.size());
@@ -41,7 +41,7 @@ public final class QueryUtil {
 			ListPanelComponent comp = (ListPanelComponent) iter.next();
 			QueryComponent qc = (QueryComponent) comp.getMainPanel();
 			// this throws InvalidQueryException
-			Query q = qc.getQuery();
+			Query q = qc.getQuery(maxMatches);
 			queries.add(q);
 		}
 		if (queries.size() == 1) {
