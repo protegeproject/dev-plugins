@@ -175,7 +175,7 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
   public Set<Frame> executeQuery(OwnSlotValueQuery query) throws ProtegeIOException {
     String searchString = query.getExpr();
     if (searchString.startsWith("*")) {
-      return delegate.getMatchingFrames(query.getSlot(), null, false, searchString, -1);
+      return delegate.getMatchingFrames(query.getSlot(), null, false, searchString, query.getMaxMatches());
     }
     else {
       SimpleStringMatcher matcher = new SimpleStringMatcher(searchString);
