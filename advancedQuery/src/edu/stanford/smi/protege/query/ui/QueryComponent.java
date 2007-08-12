@@ -28,6 +28,7 @@ import edu.stanford.smi.protege.model.KnowledgeBase;
 import edu.stanford.smi.protege.model.Slot;
 import edu.stanford.smi.protege.model.ValueType;
 import edu.stanford.smi.protege.model.query.Query;
+import edu.stanford.smi.protege.query.AdvancedQueryPlugin;
 import edu.stanford.smi.protege.query.InvalidQueryException;
 import edu.stanford.smi.protege.query.querytypes.AndQuery;
 import edu.stanford.smi.protege.query.querytypes.OrQuery;
@@ -138,7 +139,7 @@ public class QueryComponent extends JPanel {
 	 * @return Query 
 	 * @throws InvalidQueryException if the query is invalid - missing a slot of expression value
 	 */
-	public final Query getQuery() throws InvalidQueryException {
+	public final Query getQuery(int maxMatches) throws InvalidQueryException {
 		Slot slot = (Slot) selectSlot.getObject();
 		if (slot == null) {
 			JOptionPane.showMessageDialog(this, "Please choose a slot", "Choose a slot", JOptionPane.ERROR_MESSAGE);
@@ -146,10 +147,11 @@ public class QueryComponent extends JPanel {
 			throw new InvalidQueryException("A slot value is required");
 		}
 
-		return getQueryForType(slot, slot.getValueType());
+		return getQueryForType(slot, slot.getValueType(), maxMatches);
 	}
 	
-	protected Query getQueryForType(Slot slot, ValueType type) throws InvalidQueryException {
+	protected Query getQueryForType(Slot slot, ValueType type, int maxMatches) 
+    throws InvalidQueryException {
 		Query q = null;
 		String expr = getExpression();
 		if ((expr == null) || (expr.length() == 0)) {
@@ -161,14 +163,14 @@ public class QueryComponent extends JPanel {
 		}
 		
 		if (ValueType.ANY.equals(type) || ValueType.STRING.equals(type)) {
-			q = getStringQuery(slot, expr);
+			q = getStringQuery(slot, expr, maxMatches);
 		} else if (ValueType.BOOLEAN.equals(type) || ValueType.SYMBOL.equals(type) ||
 				   ValueType.INTEGER.equals(type) || ValueType.FLOAT.equals(type)) {
 			// TODO this doesn't work
-			q = new OwnSlotValueQuery(slot, expr);
+			q = new OwnSlotValueQuery(slot, expr, maxMatches);
 		} else if (ValueType.CLS.equals(type) || ValueType.INSTANCE.equals(type)) {
 			// TODO what should go here?
-			q = new OwnSlotValueQuery(slot, expr);
+			q = new OwnSlotValueQuery(slot, expr, maxMatches);
 		}
 		return q;
 	}
@@ -184,7 +186,7 @@ public class QueryComponent extends JPanel {
 		return expr;
 	}
 	
-	private Query getStringQuery(Slot slot, String expr) throws InvalidQueryException {
+	private Query getStringQuery(Slot slot, String expr, int maxMatches) throws InvalidQueryException {
 		Query q;
 		String type = (String) getTypesComboBox().getSelectedItem();
 		
@@ -200,7 +202,7 @@ public class QueryComponent extends JPanel {
 				expr = "*" + expr;
 			}
 			//System.out.println("Searching for '" + expr + "'...");
-			q = new OwnSlotValueQuery(slot, expr);
+			q = new OwnSlotValueQuery(slot, expr, maxMatches);
 		}
 		return q;
 	}
@@ -513,7 +515,7 @@ public class QueryComponent extends JPanel {
     	CloseCallback callback = new CloseCallback() {
     		public boolean canClose(int result) {
     			try {
-					queryHolder[0] = comp.getQuery();
+					queryHolder[0] = comp.getQuery(AdvancedQueryPlugin.DEFAULT_MAX_MATCHES);
 				} catch (InvalidQueryException e) {
 					return false;
 				}
