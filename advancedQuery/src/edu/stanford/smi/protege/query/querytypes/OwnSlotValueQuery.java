@@ -10,10 +10,12 @@ import edu.stanford.smi.protege.util.LocalizeUtils;
 public class OwnSlotValueQuery implements Query, Serializable {
   private Slot slot;
   private String expr;
+  private int maxMatches;
   
-  public OwnSlotValueQuery(Slot slot, String expr) {
+  public OwnSlotValueQuery(Slot slot, String expr, int maxMatches) {
     this.slot = slot;
     this.expr = expr;
+    this.maxMatches = maxMatches;
   }
 
   public String getExpr() {
@@ -22,6 +24,10 @@ public class OwnSlotValueQuery implements Query, Serializable {
 
   public Slot getSlot() {
     return slot;
+  }
+  
+  public int getMaxMatches() {
+      return maxMatches;
   }
 
   public void localize(KnowledgeBase kb) {
