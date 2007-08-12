@@ -204,7 +204,7 @@ public class QueryResourceRenderer extends ResourceRenderer implements QueryRend
 			Matcher m = pattern.matcher(text);
 			int start = 0;
 			String extra = "";
-			while (m.find(start)) {
+			while (m.find(start) && m.start() != m.end()) {
 				// BEFORE
 				String before = text.substring(start, m.start());
 				paintString(g, before, position, y, false);
@@ -227,6 +227,7 @@ public class QueryResourceRenderer extends ResourceRenderer implements QueryRend
 		}
 
 		boolean searching = AdvancedQueryPlugin.SEARCHING_ITEM.equals(text);
+        
 		if (searching) {
 			highlightOn(g, searchColor);
 		}
@@ -236,9 +237,11 @@ public class QueryResourceRenderer extends ResourceRenderer implements QueryRend
 			super.paintString(g, text, position, color, size);
 		}
 
+
 		if (searching) {
 			highlightOff(g);
 		}
+        
 	}
 
 	private void highlightOn(Graphics g, Color highlightColor) {
@@ -286,8 +289,8 @@ public class QueryResourceRenderer extends ResourceRenderer implements QueryRend
 	// tester
 	public static void main(String[] args) {
 		QueryResourceRenderer renderer = new QueryResourceRenderer();
-		OwnSlotValueQuery q1 = new OwnSlotValueQuery(null, "Chromosome");
-		OwnSlotValueQuery q2 = new OwnSlotValueQuery(null, "some");
+		OwnSlotValueQuery q1 = new OwnSlotValueQuery(null, "Chromosome", 5000);
+		OwnSlotValueQuery q2 = new OwnSlotValueQuery(null, "some", 5000);
 		ArrayList<Query> queries = new ArrayList<Query>(2);
 		queries.add(q1);
 		queries.add(q2);
