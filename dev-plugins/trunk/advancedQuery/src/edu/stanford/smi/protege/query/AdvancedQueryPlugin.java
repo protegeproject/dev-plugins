@@ -18,12 +18,15 @@ import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
 import javax.swing.Icon;
 import javax.swing.JButton;
+import javax.swing.JFormattedTextField;
+import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
 import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
+import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 
 import edu.stanford.smi.protege.model.Frame;
@@ -48,6 +51,7 @@ import edu.stanford.smi.protege.util.JProgressButton;
 import edu.stanford.smi.protege.util.LabeledComponent;
 import edu.stanford.smi.protege.util.ListPanel;
 import edu.stanford.smi.protege.util.ListPanelListener;
+import edu.stanford.smi.protege.util.Log;
 import edu.stanford.smi.protege.util.SelectableList;
 import edu.stanford.smi.protege.util.ViewAction;
 import edu.stanford.smi.protege.widget.AbstractTabWidget;
@@ -63,6 +67,8 @@ import edu.stanford.smi.protegex.owl.ui.icons.OverlayIcon;
  * @date 15-Aug-06
  */
 public class AdvancedQueryPlugin extends AbstractTabWidget {
+    
+    public static final int DEFAULT_MAX_MATCHES = 1000;
 
 	public static final String SEARCHING_ITEM = "Searching...";
 	private static final String SEARCH_RESULTS = "Search Results";
@@ -77,6 +83,7 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 	private boolean canIndex;
 	private boolean isOWL;
 	private Slot defaultSlot = null;
+    private int maxMatches = DEFAULT_MAX_MATCHES;
 	
 	private ViewAction viewAction;
 	private ViewAction editAction;
@@ -88,6 +95,7 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 	private JRadioButton btnAndQuery;
 	private JRadioButton btnOrQuery;
 	private JPanel pnlQueryBottom;
+    
 	private JButton btnSearch;
 	private LabeledComponent resultsComponent;
 	private QueryRenderer queryRenderer;
@@ -263,7 +271,7 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 			pnlQueryBottom.setLayout(new BoxLayout(pnlQueryBottom, BoxLayout.LINE_AXIS));
 			pnlQueryBottom.setPreferredSize(new Dimension(500, 28));
 			
-			pnlQueryBottom.add(new JButton(getAddQueryAction()));
+			pnlQueryBottom.add(new JButton(getSetMaxMatchesAction()));
 			pnlQueryBottom.add(Box.createRigidArea(new Dimension(4, 0)));
 			
 			JButton btn = new JButton(new AbstractAction("Clear", Icons.getClearIcon(false, false)) {
@@ -329,6 +337,21 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 		};
 	}
 
+    private Action getSetMaxMatchesAction() {
+        return new AbstractAction("Set Max Matches", Icons.getAddQueryLibraryIcon()) {
+            public void actionPerformed(ActionEvent e) {
+                String userValue = JOptionPane.showInputDialog("Enter max matches count (0 or less for all)", 
+                                                               new Integer(maxMatches));
+                try {
+                    maxMatches = Integer.parseInt(userValue);
+                }
+                catch (NumberFormatException nfe) {
+                    Log.getLogger().fine("max matches count not updated.");
+                }
+            }
+        };
+    }
+    
 	private Action getAddRestrictionQueryAction() {
 		Icon icon = new OverlayIcon(OWLIcons.getImageIcon(OWLIcons.OWL_RESTRICTION).getImage(), 5, 5, 
 									OWLIcons.getImageIcon(OWLIcons.ADD_OVERLAY).getImage(), 15, 13, 15, 16);
@@ -402,8 +425,9 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 				int hits = 0;
 				boolean error = false;
 				try {
-					Query query = QueryUtil.getQueryFromListPanel(queriesListPanel, btnAndQuery.isSelected());
+					Query query = QueryUtil.getQueryFromListPanel(queriesListPanel, btnAndQuery.isSelected(), maxMatches);
 					hits = doQuery(query);
+                    indicateSearchDone(hits, false);
 					setViewButtonsEnabled((hits > 0));
 				} catch (InvalidQueryException e) {
 					final String msg = "Invalid query: " + e.getMessage();
@@ -420,12 +444,18 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 				} finally {
 					setCursor(oldCursor);
 					btnSearch.setEnabled(true);
-					String matchString = (error ? "" : "  (" + hits + " match" + (hits == 1 ? ")" : "es)"));
-					resultsComponent.setHeaderLabel(SEARCH_RESULTS + matchString);
+                    if (error) {
+                        indicateSearchDone(hits, true);
+                    }
 				}
 			}
 		});
 	}
+    
+    private void indicateSearchDone(int hits, boolean error) {
+        String matchString = (error ? "" : "  (" + hits + " match" + (hits == 1 ? ")" : "es)"));
+        resultsComponent.setHeaderLabel(SEARCH_RESULTS + matchString);
+    }
 
 	/**
 	 * Executes the query using the {@link KnowledgeBase} and puts the results
