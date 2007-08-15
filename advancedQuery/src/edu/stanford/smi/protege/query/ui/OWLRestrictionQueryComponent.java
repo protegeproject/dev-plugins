@@ -21,8 +21,10 @@ import edu.stanford.smi.protege.model.ValueType;
 import edu.stanford.smi.protege.model.query.Query;
 import edu.stanford.smi.protege.query.InvalidQueryException;
 import edu.stanford.smi.protege.query.querytypes.AndQuery;
+import edu.stanford.smi.protege.query.querytypes.NestedOwnSlotValueQuery;
 import edu.stanford.smi.protege.query.querytypes.OWLRestrictionQuery;
 import edu.stanford.smi.protege.query.querytypes.OrQuery;
+import edu.stanford.smi.protege.query.querytypes.VisitableQuery;
 import edu.stanford.smi.protege.resource.Icons;
 import edu.stanford.smi.protege.util.LabeledComponent;
 import edu.stanford.smi.protege.util.ListPanel;
@@ -80,10 +82,16 @@ public class OWLRestrictionQueryComponent extends QueryComponent {
 	}
 
 	@Override
-	protected Query getQueryForType(Slot slot, ValueType type, int maxMatches) throws InvalidQueryException {
-		Query query = QueryUtil.getQueryFromListPanel(groupListPanel, btnAndQuery.isSelected(), maxMatches);
+	protected VisitableQuery getQueryForType(Slot slot, ValueType type, int maxMatches) throws InvalidQueryException {
+		VisitableQuery query = QueryUtil.getQueryFromListPanel(groupListPanel, btnAndQuery.isSelected(), maxMatches);
+		OWLProperty property = (OWLProperty) slot;
 		if (query != null) {
-			return new OWLRestrictionQuery(getOWLModel(), (OWLProperty) slot, query);
+		    if (property.isAnnotationProperty()) {
+		        return new NestedOwnSlotValueQuery(property, query);
+		    }
+		    else {
+		        return new OWLRestrictionQuery(getOWLModel(), property, query);
+		    }
 		}
 		return null;
 	}

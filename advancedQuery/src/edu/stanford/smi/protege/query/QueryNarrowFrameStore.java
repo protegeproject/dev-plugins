@@ -25,12 +25,14 @@ import edu.stanford.smi.protege.model.Slot;
 import edu.stanford.smi.protege.model.framestore.NarrowFrameStore;
 import edu.stanford.smi.protege.model.query.Query;
 import edu.stanford.smi.protege.model.query.QueryCallback;
-import edu.stanford.smi.protege.model.query.SynchronizeQueryCallback;
 import edu.stanford.smi.protege.query.querytypes.AndQuery;
+import edu.stanford.smi.protege.query.querytypes.NestedOwnSlotValueQuery;
 import edu.stanford.smi.protege.query.querytypes.OWLRestrictionQuery;
 import edu.stanford.smi.protege.query.querytypes.OrQuery;
 import edu.stanford.smi.protege.query.querytypes.OwnSlotValueQuery;
 import edu.stanford.smi.protege.query.querytypes.PhoneticQuery;
+import edu.stanford.smi.protege.query.querytypes.QueryVisitor;
+import edu.stanford.smi.protege.query.querytypes.VisitableQuery;
 import edu.stanford.smi.protege.util.ApplicationProperties;
 import edu.stanford.smi.protege.util.Log;
 import edu.stanford.smi.protege.util.SimpleStringMatcher;
@@ -110,11 +112,15 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
         throw new ProtegeIOException("Lucene Indicies not ready yet: Indexing in progress");
       }
     }
+    if (!(query instanceof VisitableQuery)) {
+        getDelegate().executeQuery(query, qc);
+    }
     new Thread() {
       public void run() {
         try {
-          Set<Frame> results = executeQuery(query);
-          qc.provideQueryResults(results);
+            QueryResultsCollector collector = new QueryResultsCollector();
+            ((VisitableQuery) query).accept(collector);
+            qc.provideQueryResults(collector.getResults());
         } catch (OntologyException oe) {
           qc.handleError(oe);
         } catch (ProtegeIOException ioe) {
@@ -126,100 +132,113 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
     }.start();
   }
   
-  public Set<Frame> executeQuery(Query query) throws OntologyException, ProtegeIOException {
-    if (query instanceof PhoneticQuery) {
-      return executeQuery((PhoneticQuery) query);
-    }
-    else if (query instanceof OWLRestrictionQuery) {
-      return executeQuery((OWLRestrictionQuery) query);
-    }
-    else if (query instanceof OwnSlotValueQuery) {
-      return  executeQuery((OwnSlotValueQuery) query);
-    }
-    else if (query instanceof AndQuery) {
-      return executeQuery((AndQuery) query);
-    }
-    else if (query instanceof OrQuery) {
-      return executeQuery((OrQuery) query);
-    }
-    else {
-      SynchronizeQueryCallback qc = new SynchronizeQueryCallback(kbLock);
-      synchronized (kbLock) {
-        delegate.executeQuery(query, qc);
-      }
-      return qc.waitForResults();
-    }
-  }
-  
-  public Set<Frame> executeQuery(PhoneticQuery query) throws ProtegeIOException {
-    try {
-      return phoneticIndexer.executeQuery(query);
-    } catch (IOException ioe) {
-      Log.getLogger().log(Level.WARNING, "Search failed", ioe);
-      throw new ProtegeIOException(ioe);
-    } 
-  }
-  
-  public Set<Frame> executeQuery(OWLRestrictionQuery query) {
-    Query innerQuery = query.getInnerQuery();
-    Set<Frame> frames = executeQuery(innerQuery);
-    Set<Frame> results = new HashSet<Frame>();
-    for (Frame frame : frames) {
-      if (frame instanceof Cls) {
-        results.addAll(query.executeQueryBasedOnQueryResult((Cls) frame, getDelegate()));
-      }
-    }
-    return results;
-  }
-  
-  public Set<Frame> executeQuery(OwnSlotValueQuery query) throws ProtegeIOException {
-    String searchString = query.getExpr();
-    if (searchString.startsWith("*")) {
-      return delegate.getMatchingFrames(query.getSlot(), null, false, searchString, query.getMaxMatches());
-    }
-    else {
-      SimpleStringMatcher matcher = new SimpleStringMatcher(searchString);
-      Set<Frame> frames = delegate.getMatchingFrames(query.getSlot(), null, false, 
-                                                     "*" + searchString, -1);
+  public class QueryResultsCollector implements QueryVisitor {
       Set<Frame> results = new HashSet<Frame>();
-      for (Frame frame : frames)  {
-        boolean found = false;
-        for (Object o : delegate.getValues(frame, query.getSlot(), null, false)) {
-          if (o instanceof String && matcher.isMatch((String) o)) {
-            found = true;
-            break;
-          }
-        }
-        if (found) {
-          results.add(frame);
-        }
+
+      public void setResults(Set<Frame> results) {
+          this.results = results;
       }
-      return results;
-    }
+
+      public void retainResults(Set<Frame> results) {
+          this.results.retainAll(results);
+      }
+
+      public void addResults(Set<Frame> results) {
+          this.results.addAll(results);
+      }
+
+      public void addResult(Frame frame) {
+          results.add(frame);
+      }
+
+      public Set<Frame> getResults() {
+          return results;
+      }
+
+      public void visit(AndQuery q) {
+          Collection<VisitableQuery> conjuncts = q.getConjuncts();
+          if (conjuncts.isEmpty()) {
+              results = delegate.getFrames();
+          }
+          QueryResultsCollector innerCollector = new  QueryResultsCollector();
+          Iterator<VisitableQuery> conjunctIterator = conjuncts.iterator();
+          VisitableQuery conjunct = conjunctIterator.next();
+          conjunct.accept(innerCollector);
+          setResults(innerCollector.getResults());
+          while (conjunctIterator.hasNext()) {
+              conjunct = conjunctIterator.next();
+              innerCollector = new QueryResultsCollector();
+              conjunct.accept(innerCollector);
+              retainResults(innerCollector.getResults());
+          }
+      }
+
+      public void visit(OrQuery q) {
+          for (VisitableQuery disjunct : q.getDisjuncts()) {
+              QueryResultsCollector innerCollector = new QueryResultsCollector();
+              disjunct.accept(innerCollector);
+              addResults(innerCollector.getResults());
+          }
+      }
+      
+      public void visit(NestedOwnSlotValueQuery q) {
+          QueryResultsCollector innerCollector = new QueryResultsCollector();
+          q.getInnerQuery().accept(innerCollector);
+          for (Frame frame : innerCollector.getResults()) {
+              Set<Frame> frames = delegate.getFrames(q.getSlot(), null, false, frame);
+              if (frames != null) {
+                  addResults(frames);
+              }
+          }
+      }
+
+      public void visit(OWLRestrictionQuery q) {
+          VisitableQuery innerQuery = q.getInnerQuery();
+          QueryResultsCollector inner = new QueryResultsCollector();
+          innerQuery.accept(inner);
+          Set<Frame> frames = inner.getResults();
+          for (Frame frame : frames) {
+              if (frame instanceof Cls) {
+                  addResults(q.executeQueryBasedOnQueryResult((Cls) frame, getDelegate()));
+              }
+          }
+      }
+
+      public void visit(OwnSlotValueQuery q) {
+          String searchString = q.getExpr();
+          if (searchString.startsWith("*")) {
+              setResults(delegate.getMatchingFrames(q.getSlot(), null, false, searchString, q.getMaxMatches()));
+          }
+          else {
+              SimpleStringMatcher matcher = new SimpleStringMatcher(searchString);
+              Set<Frame> frames = delegate.getMatchingFrames(q.getSlot(), null, false, 
+                                                             "*" + searchString, -1);
+              for (Frame frame : frames)  {
+                  boolean found = false;
+                  for (Object o : delegate.getValues(frame, q.getSlot(), null, false)) {
+                      if (o instanceof String && matcher.isMatch((String) o)) {
+                          found = true;
+                          break;
+                      }
+                  }
+                  if (found) {
+                      addResult(frame);
+                  }
+              }
+          }
+      }
+
+      public void visit(PhoneticQuery q) {
+          try {
+              setResults(phoneticIndexer.executeQuery(q));
+          } catch (IOException ioe) {
+              Log.getLogger().log(Level.WARNING, "Search failed", ioe);
+              throw new ProtegeIOException(ioe);
+          } 
+      }
+
   }
-  
-  public Set<Frame> executeQuery(AndQuery query) {
-    Collection<Query> conjuncts = query.getConjuncts();
-    if (conjuncts.isEmpty()) {
-      return delegate.getFrames();
-    }
-    Iterator<Query> conjunctIterator = conjuncts.iterator();
-    Query conjunct = conjunctIterator.next();
-    Set<Frame> results = executeQuery(conjunct);
-    while (conjunctIterator.hasNext()) {
-      conjunct = conjunctIterator.next();
-      results.retainAll(executeQuery(conjunct));
-    }
-    return results;
-  }
-  
-  public Set<Frame> executeQuery(OrQuery query) {
-    Set<Frame> results = new HashSet<Frame>();
-    for (Query q : query.getDisjuncts()) {
-      results.addAll(executeQuery(q));
-    }
-    return results;
-  }
+
   
  
   /*---------------------------------------------------------------------
