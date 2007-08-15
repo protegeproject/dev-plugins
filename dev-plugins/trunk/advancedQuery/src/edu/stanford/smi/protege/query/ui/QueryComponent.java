@@ -34,6 +34,7 @@ import edu.stanford.smi.protege.query.querytypes.AndQuery;
 import edu.stanford.smi.protege.query.querytypes.OrQuery;
 import edu.stanford.smi.protege.query.querytypes.OwnSlotValueQuery;
 import edu.stanford.smi.protege.query.querytypes.PhoneticQuery;
+import edu.stanford.smi.protege.query.querytypes.VisitableQuery;
 import edu.stanford.smi.protege.resource.Icons;
 import edu.stanford.smi.protege.ui.DisplayUtilities;
 import edu.stanford.smi.protege.util.AdvancedQueryPluginDefaults;
@@ -139,7 +140,7 @@ public class QueryComponent extends JPanel {
 	 * @return Query 
 	 * @throws InvalidQueryException if the query is invalid - missing a slot of expression value
 	 */
-	public final Query getQuery(int maxMatches) throws InvalidQueryException {
+	public final VisitableQuery getQuery(int maxMatches) throws InvalidQueryException {
 		Slot slot = (Slot) selectSlot.getObject();
 		if (slot == null) {
 			JOptionPane.showMessageDialog(this, "Please choose a slot", "Choose a slot", JOptionPane.ERROR_MESSAGE);
@@ -150,9 +151,9 @@ public class QueryComponent extends JPanel {
 		return getQueryForType(slot, slot.getValueType(), maxMatches);
 	}
 	
-	protected Query getQueryForType(Slot slot, ValueType type, int maxMatches) 
+	protected VisitableQuery getQueryForType(Slot slot, ValueType type, int maxMatches) 
     throws InvalidQueryException {
-		Query q = null;
+		VisitableQuery q = null;
 		String expr = getExpression();
 		if ((expr == null) || (expr.length() == 0)) {
 			JOptionPane.showMessageDialog(this, "Please enter an expression", "Enter an expression", JOptionPane.ERROR_MESSAGE);
@@ -186,8 +187,8 @@ public class QueryComponent extends JPanel {
 		return expr;
 	}
 	
-	private Query getStringQuery(Slot slot, String expr, int maxMatches) throws InvalidQueryException {
-		Query q;
+	private VisitableQuery getStringQuery(Slot slot, String expr, int maxMatches) throws InvalidQueryException {
+		VisitableQuery q;
 		String type = (String) getTypesComboBox().getSelectedItem();
 		
 		if (SOUNDS_LIKE.equals(type)) {

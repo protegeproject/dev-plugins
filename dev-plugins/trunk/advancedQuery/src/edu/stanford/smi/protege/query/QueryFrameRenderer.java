@@ -18,6 +18,7 @@ import edu.stanford.smi.protege.query.querytypes.AndQuery;
 import edu.stanford.smi.protege.query.querytypes.OWLRestrictionQuery;
 import edu.stanford.smi.protege.query.querytypes.OrQuery;
 import edu.stanford.smi.protege.query.querytypes.OwnSlotValueQuery;
+import edu.stanford.smi.protege.query.querytypes.VisitableQuery;
 import edu.stanford.smi.protege.ui.FrameRenderer;
 import edu.stanford.smi.protege.util.DefaultRenderer;
 import edu.stanford.smi.protege.util.ModalDialog;
@@ -281,7 +282,7 @@ public class QueryFrameRenderer extends FrameRenderer implements QueryRenderer {
 		QueryFrameRenderer renderer = new QueryFrameRenderer();
 		OwnSlotValueQuery q1 = new OwnSlotValueQuery(null, "Chromosome", 5000);
 		OwnSlotValueQuery q2 = new OwnSlotValueQuery(null, "some", 5000);
-		ArrayList<Query> queries = new ArrayList<Query>(2);
+		ArrayList<VisitableQuery> queries = new ArrayList<VisitableQuery>(2);
 		queries.add(q1);
 		queries.add(q2);
 		OrQuery query = new OrQuery(queries);

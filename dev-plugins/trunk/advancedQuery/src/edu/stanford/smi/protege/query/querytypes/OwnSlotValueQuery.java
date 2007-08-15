@@ -1,13 +1,10 @@
 package edu.stanford.smi.protege.query.querytypes;
 
-import java.io.Serializable;
-
 import edu.stanford.smi.protege.model.KnowledgeBase;
 import edu.stanford.smi.protege.model.Slot;
-import edu.stanford.smi.protege.model.query.Query;
 import edu.stanford.smi.protege.util.LocalizeUtils;
 
-public class OwnSlotValueQuery implements Query, Serializable {
+public class OwnSlotValueQuery implements VisitableQuery {
   private Slot slot;
   private String expr;
   private int maxMatches;
@@ -16,6 +13,10 @@ public class OwnSlotValueQuery implements Query, Serializable {
     this.slot = slot;
     this.expr = expr;
     this.maxMatches = maxMatches;
+  }
+  
+  public void accept(QueryVisitor visitor) {
+      visitor.visit(this);
   }
 
   public String getExpr() {

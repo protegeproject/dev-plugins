@@ -1,13 +1,10 @@
 package edu.stanford.smi.protege.query.querytypes;
 
-import java.io.Serializable;
-
 import edu.stanford.smi.protege.model.KnowledgeBase;
 import edu.stanford.smi.protege.model.Slot;
-import edu.stanford.smi.protege.model.query.Query;
 import edu.stanford.smi.protege.util.LocalizeUtils;
 
-public class PhoneticQuery implements Query, Serializable {
+public class PhoneticQuery implements VisitableQuery {
 
   private Slot slot;
   private String expr;
@@ -15,6 +12,10 @@ public class PhoneticQuery implements Query, Serializable {
   public PhoneticQuery(Slot slot, String expr) {
     this.slot = slot;
     this.expr = expr;
+  }
+  
+  public void accept(QueryVisitor visitor) {
+      visitor.visit(this);
   }
   
   public String getExpr() {

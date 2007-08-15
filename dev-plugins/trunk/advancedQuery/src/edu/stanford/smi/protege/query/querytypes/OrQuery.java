@@ -1,21 +1,24 @@
 package edu.stanford.smi.protege.query.querytypes;
 
-import java.io.Serializable;
 import java.util.Collection;
 import java.util.Iterator;
 
 import edu.stanford.smi.protege.model.KnowledgeBase;
 import edu.stanford.smi.protege.model.query.Query;
 
-public class OrQuery implements Query, Serializable {
+public class OrQuery implements VisitableQuery {
   
-  Collection<Query> disjuncts;
+  Collection<VisitableQuery> disjuncts;
 
-  public OrQuery(Collection<Query> disjuncts) {
+  public OrQuery(Collection<VisitableQuery> disjuncts) {
     this.disjuncts = disjuncts;
   }
+  
+  public void accept(QueryVisitor visitor) {
+      visitor.visit(this);
+  }
 
-  public Collection<Query> getDisjuncts() {
+  public Collection<VisitableQuery> getDisjuncts() {
     return disjuncts;
   }
 

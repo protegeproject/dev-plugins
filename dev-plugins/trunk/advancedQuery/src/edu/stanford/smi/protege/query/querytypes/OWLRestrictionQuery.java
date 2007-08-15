@@ -1,6 +1,5 @@
 package edu.stanford.smi.protege.query.querytypes;
 
-import java.io.Serializable;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -16,7 +15,7 @@ import edu.stanford.smi.protegex.owl.model.OWLNames;
 import edu.stanford.smi.protegex.owl.model.OWLProperty;
 import edu.stanford.smi.protegex.owl.model.RDFProperty;
 
-public class OWLRestrictionQuery implements Query, Serializable {
+public class OWLRestrictionQuery implements VisitableQuery {
   private static boolean owlInitialized = false;
   
   private static RDFProperty equivalentClass;
@@ -30,17 +29,16 @@ public class OWLRestrictionQuery implements Query, Serializable {
   private static Slot nameSlot;
 
   private OWLProperty property;
-  private Query query;
+  private VisitableQuery query;
   
   public OWLRestrictionQuery(OWLModel om,
                              OWLProperty property, 
-                             Query query) {
+                             VisitableQuery query) {
     initializeOWLEntities(om);
     this.property = property;
     this.query = query;
   }
   
-  @SuppressWarnings("deprecation")
   private void initializeOWLEntities(OWLModel om) {
     if (!owlInitialized) {
       equivalentClass   = om.getOWLEquivalentClassProperty();
@@ -50,19 +48,23 @@ public class OWLRestrictionQuery implements Query, Serializable {
       rdfRest           = om.getRDFRestProperty();
       someValuesFrom    = om.getRDFProperty(OWLNames.Slot.SOME_VALUES_FROM);
       
-      directSubclasses  = om.getSystemFrames().getDirectSubclassesSlot();
-      nameSlot          = om.getSystemFrames().getNameSlot();
+      directSubclasses  = ((KnowledgeBase) om).getSystemFrames().getDirectSubclassesSlot();
+      nameSlot          = ((KnowledgeBase) om).getSystemFrames().getNameSlot();
 
       owlInitialized = true;
     }
     
+  }
+  
+  public void accept(QueryVisitor visitor) {
+      visitor.visit(this);
   }
 
   public OWLProperty getProperty() {
     return property;
   }
 
-  public Query getInnerQuery() {
+  public VisitableQuery getInnerQuery() {
     return query;
   }
   

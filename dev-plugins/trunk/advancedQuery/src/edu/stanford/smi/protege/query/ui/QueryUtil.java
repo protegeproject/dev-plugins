@@ -13,6 +13,7 @@ import edu.stanford.smi.protege.model.query.Query;
 import edu.stanford.smi.protege.query.InvalidQueryException;
 import edu.stanford.smi.protege.query.querytypes.AndQuery;
 import edu.stanford.smi.protege.query.querytypes.OrQuery;
+import edu.stanford.smi.protege.query.querytypes.VisitableQuery;
 import edu.stanford.smi.protege.util.ListPanel;
 import edu.stanford.smi.protege.util.ListPanelComponent;
 import edu.stanford.smi.protegex.owl.model.OWLModel;
@@ -33,19 +34,19 @@ public final class QueryUtil {
 	 * @throws InvalidQueryException if one of the query objects is invalid
 	 */
 	@SuppressWarnings("unchecked")
-	public static Query getQueryFromListPanel(ListPanel listPanel, boolean andQuery, int maxMatches) throws InvalidQueryException {
-		Query query = null;
+	public static VisitableQuery getQueryFromListPanel(ListPanel listPanel, boolean andQuery, int maxMatches) throws InvalidQueryException {
+		VisitableQuery query = null;
 		Collection<JPanel> panels = listPanel.getPanels();
-		ArrayList<Query> queries = new ArrayList<Query>(panels.size());
+		ArrayList<VisitableQuery> queries = new ArrayList<VisitableQuery>(panels.size());
 		for (Iterator iter = panels.iterator(); iter.hasNext(); ) {
 			ListPanelComponent comp = (ListPanelComponent) iter.next();
 			QueryComponent qc = (QueryComponent) comp.getMainPanel();
 			// this throws InvalidQueryException
-			Query q = qc.getQuery(maxMatches);
+			VisitableQuery q = qc.getQuery(maxMatches);
 			queries.add(q);
 		}
 		if (queries.size() == 1) {
-			query = (Query) queries.get(0);
+			query = queries.get(0);
 		} else if (queries.size() > 1) {
 			query = (andQuery ? new AndQuery(queries) : new OrQuery(queries));
 		}

@@ -18,15 +18,12 @@ import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
 import javax.swing.Icon;
 import javax.swing.JButton;
-import javax.swing.JFormattedTextField;
-import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
 import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
-import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 
 import edu.stanford.smi.protege.model.Frame;
@@ -157,7 +154,7 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 		if (isOWL) {
 			btn = lcLeft.addHeaderButton(getAddRestrictionQueryAction());
 			dim = new Dimension(124, btn.getPreferredSize().height);
-			btn.setText("Add Restriction");
+			btn.setText("Add Nested");
 			btn.setPreferredSize(dim);
 			btn.setMinimumSize(dim);
 			btn.setMaximumSize(dim);
@@ -338,7 +335,7 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 	}
 
     private Action getSetMaxMatchesAction() {
-        return new AbstractAction("Set Max Matches", Icons.getAddQueryLibraryIcon()) {
+        return new AbstractAction("Set Max Matches") {
             public void actionPerformed(ActionEvent e) {
                 String userValue = JOptionPane.showInputDialog("Enter max matches count (0 or less for all)", 
                                                                new Integer(maxMatches));
@@ -353,9 +350,9 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
     }
     
 	private Action getAddRestrictionQueryAction() {
-		Icon icon = new OverlayIcon(OWLIcons.getImageIcon(OWLIcons.OWL_RESTRICTION).getImage(), 5, 5, 
+		Icon icon = new OverlayIcon(OWLIcons.getImageIcon(OWLIcons.PRIMITIVE_OWL_CLASS).getImage(), 5, 5, 
 									OWLIcons.getImageIcon(OWLIcons.ADD_OVERLAY).getImage(), 15, 13, 15, 16);
-		return new AbstractAction("Add a restriction query", icon) {
+		return new AbstractAction("Add a nested query", icon) {
 			public void actionPerformed(ActionEvent e) {
 				QueryUtil.addRestrictionQueryComponent((OWLModel)kb, slots, defaultSlot, queriesListPanel);
 			}
