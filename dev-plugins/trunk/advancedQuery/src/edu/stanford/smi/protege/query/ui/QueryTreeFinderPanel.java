@@ -93,7 +93,7 @@ public class QueryTreeFinderPanel extends JPanel implements Disposable {
 		add(createTextField(), BorderLayout.CENTER);
 		add(createFindButton(), BorderLayout.EAST);
 		setBorder(BorderFactory.createEmptyBorder(2, 0, 0, 0));
-
+		
 		selectedCls = null;
 
 	}
