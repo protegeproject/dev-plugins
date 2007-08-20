@@ -6,6 +6,7 @@ import javax.swing.Icon;
 import javax.swing.SwingUtilities;
 
 import edu.stanford.smi.protege.model.Cls;
+import edu.stanford.smi.protege.plugin.PluginUtilities;
 import edu.stanford.smi.protege.ui.ProjectView;
 import edu.stanford.smi.protege.util.Selectable;
 import edu.stanford.smi.protege.widget.TabWidget;
@@ -31,8 +32,8 @@ public class NCIViewAction extends NCIEditAction {
 	public static boolean isValid() {
 		boolean valid = true;
 		try {
-			Class.forName(NCITAB);
-			Class.forName(EDITDIALOG);
+			PluginUtilities.forName(NCITAB, true);
+			PluginUtilities.forName(EDITDIALOG,true);
 		} catch (Throwable t) {
 			valid = false;
 		}
@@ -48,7 +49,7 @@ public class NCIViewAction extends NCIEditAction {
 			public void run() {
 				// use reflection to remove dependency on NCI code
 				try {
-					Class.forName(EDITDIALOG).getConstructors()[0].newInstance(tab, cls);
+					PluginUtilities.forName(EDITDIALOG, true).getConstructors()[0].newInstance(tab, cls);
 				} catch (Throwable t) {
 					System.err.println("Warning - couldn't open the EditDialog for " + cls);
 					t.printStackTrace();

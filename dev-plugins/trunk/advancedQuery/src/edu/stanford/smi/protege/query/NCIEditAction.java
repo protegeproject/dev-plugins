@@ -7,6 +7,7 @@ import javax.swing.Icon;
 import javax.swing.SwingUtilities;
 
 import edu.stanford.smi.protege.model.Cls;
+import edu.stanford.smi.protege.plugin.PluginUtilities;
 import edu.stanford.smi.protege.ui.ProjectManager;
 import edu.stanford.smi.protege.ui.ProjectView;
 import edu.stanford.smi.protege.util.Selectable;
@@ -34,7 +35,7 @@ public class NCIEditAction extends ViewAction {
 	public static boolean isValid() {
 		boolean valid = true;
 		try {
-			Class.forName(NCITAB);
+			PluginUtilities.forName(NCITAB, true);
 		} catch (Throwable t) {
 			valid = false;
 		}
