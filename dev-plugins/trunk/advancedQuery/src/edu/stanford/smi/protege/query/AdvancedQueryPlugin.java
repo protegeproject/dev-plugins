@@ -280,8 +280,8 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 			pnlQueryBottom.add(btn);
 			pnlQueryBottom.add(Box.createRigidArea(new Dimension(8, 0)));
 			
-			btnAndQuery = new JRadioButton("Match All  ", false);
-			btnOrQuery = new JRadioButton("Match Any  ", true);
+			btnAndQuery = new JRadioButton("Match All  ", true);
+			btnOrQuery = new JRadioButton("Match Any  ", false);
 			pnlQueryBottom.add(btnAndQuery);
 			pnlQueryBottom.add(btnOrQuery);
 			ButtonGroup group = new ButtonGroup();
