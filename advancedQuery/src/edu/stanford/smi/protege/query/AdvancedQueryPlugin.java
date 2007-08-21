@@ -422,7 +422,10 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 				int hits = 0;
 				boolean error = false;
 				try {
-					Query query = QueryUtil.getQueryFromListPanel(queriesListPanel, btnAndQuery.isSelected(), maxMatches);
+					Query query = QueryUtil.getQueryFromListPanel(queriesListPanel, 
+															      btnAndQuery.isSelected(), 
+															      maxMatches <= 0 ? KnowledgeBase.UNLIMITED_MATCHES :
+															    	  maxMatches);
 					hits = doQuery(query);
                     indicateSearchDone(hits, false);
 					setViewButtonsEnabled((hits > 0));
