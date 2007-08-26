@@ -290,8 +290,8 @@ public class QueryResourceRenderer extends ResourceRenderer implements QueryRend
 	// tester
 	public static void main(String[] args) {
 		QueryResourceRenderer renderer = new QueryResourceRenderer();
-		OwnSlotValueQuery q1 = new OwnSlotValueQuery(null, "Chromosome", 5000);
-		OwnSlotValueQuery q2 = new OwnSlotValueQuery(null, "some", 5000);
+		OwnSlotValueQuery q1 = new OwnSlotValueQuery(null, "Chromosome");
+		OwnSlotValueQuery q2 = new OwnSlotValueQuery(null, "some");
 		ArrayList<VisitableQuery> queries = new ArrayList<VisitableQuery>(2);
 		queries.add(q1);
 		queries.add(q2);

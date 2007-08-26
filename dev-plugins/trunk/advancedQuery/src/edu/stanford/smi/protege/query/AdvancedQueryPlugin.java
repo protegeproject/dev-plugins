@@ -32,7 +32,9 @@ import edu.stanford.smi.protege.model.Slot;
 import edu.stanford.smi.protege.model.framestore.NarrowFrameStore;
 import edu.stanford.smi.protege.model.query.Query;
 import edu.stanford.smi.protege.query.querytypes.AndQuery;
+import edu.stanford.smi.protege.query.querytypes.MaxMatchQuery;
 import edu.stanford.smi.protege.query.querytypes.OrQuery;
+import edu.stanford.smi.protege.query.querytypes.VisitableQuery;
 import edu.stanford.smi.protege.query.ui.QueryComponent;
 import edu.stanford.smi.protege.query.ui.QueryUtil;
 import edu.stanford.smi.protege.resource.Icons;
@@ -422,10 +424,11 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 				int hits = 0;
 				boolean error = false;
 				try {
-					Query query = QueryUtil.getQueryFromListPanel(queriesListPanel, 
-															      btnAndQuery.isSelected(), 
-															      maxMatches <= 0 ? KnowledgeBase.UNLIMITED_MATCHES :
-															    	  maxMatches);
+					VisitableQuery query = QueryUtil.getQueryFromListPanel(queriesListPanel, 
+															      		   btnAndQuery.isSelected());
+					if (maxMatches > 0) {
+						query = new MaxMatchQuery(query, maxMatches);
+					}
 					hits = doQuery(query);
                     indicateSearchDone(hits, false);
 					setViewButtonsEnabled((hits > 0));

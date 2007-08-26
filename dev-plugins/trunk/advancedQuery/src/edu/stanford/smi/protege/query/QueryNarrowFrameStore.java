@@ -26,6 +26,7 @@ import edu.stanford.smi.protege.model.framestore.NarrowFrameStore;
 import edu.stanford.smi.protege.model.query.Query;
 import edu.stanford.smi.protege.model.query.QueryCallback;
 import edu.stanford.smi.protege.query.querytypes.AndQuery;
+import edu.stanford.smi.protege.query.querytypes.MaxMatchQuery;
 import edu.stanford.smi.protege.query.querytypes.NestedOwnSlotValueQuery;
 import edu.stanford.smi.protege.query.querytypes.OWLRestrictionQuery;
 import edu.stanford.smi.protege.query.querytypes.OrQuery;
@@ -133,21 +134,21 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
   }
   
   public class QueryResultsCollector implements QueryVisitor {
-      Set<Frame> results = new HashSet<Frame>();
+      private Set<Frame> results = new HashSet<Frame>();
 
-      public void setResults(Set<Frame> results) {
+      private void setResults(Set<Frame> results) {
           this.results = results;
       }
 
-      public void retainResults(Set<Frame> results) {
+      private void retainResults(Set<Frame> results) {
           this.results.retainAll(results);
       }
 
-      public void addResults(Set<Frame> results) {
+      private void addResults(Set<Frame> results) {
           this.results.addAll(results);
       }
 
-      public void addResult(Frame frame) {
+      private void addResult(Frame frame) {
           results.add(frame);
       }
 
@@ -178,7 +179,17 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
               QueryResultsCollector innerCollector = new QueryResultsCollector();
               disjunct.accept(innerCollector);
               addResults(innerCollector.getResults());
+              if (boundSearchResults(q.getMaxMatches())) {
+            	  break;
+              }
           }
+      }
+      
+      public void visit(MaxMatchQuery q) {
+    	  QueryResultsCollector innerCollector = new QueryResultsCollector();
+    	  q.getInnerQuery().accept(innerCollector);
+    	  setResults(innerCollector.getResults());
+    	  boundSearchResults(q.getMaxMatches());
       }
       
       public void visit(NestedOwnSlotValueQuery q) {
@@ -212,7 +223,7 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
           else {
               SimpleStringMatcher matcher = new SimpleStringMatcher(searchString);
               Set<Frame> frames = delegate.getMatchingFrames(q.getSlot(), null, false, 
-                                                             "*" + searchString, -1);
+                                                             "*" + searchString, KnowledgeBase.UNLIMITED_MATCHES);
               for (Frame frame : frames)  {
                   boolean found = false;
                   for (Object o : delegate.getValues(frame, q.getSlot(), null, false)) {
@@ -223,6 +234,9 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
                   }
                   if (found) {
                       addResult(frame);
+                      if (boundSearchResults(q.getMaxMatches())) {
+                    	  break;
+                      }
                   }
               }
           }
@@ -236,10 +250,34 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
               throw new ProtegeIOException(ioe);
           } 
       }
+      
+      private boolean boundSearchResults(int maxMatches) {
+    	  if (maxMatches == KnowledgeBase.UNLIMITED_MATCHES) {
+    		  return false;
+    	  }
+    	  if (results.size() > maxMatches) {
+    		  // filtering this down seems like a waste but the 
+    		  // client may actually not be able to handle too many results
+    		  Set<Frame> filteredResults = new HashSet<Frame>();
+    		  int counter = 0;
+    		  for (Frame f : results)  {
+    			  if (++counter <= maxMatches) {
+    				  filteredResults.add(f);
+    			  }
+    			  else {
+    				  break;
+    			  }
+    		  }
+    		  setResults(filteredResults);
+    		  return true;
+    	  }
+    	  else if (results.size() == maxMatches) {
+    		  return true;
+    	  }
+    	  return false;
+      }
 
   }
-
-  
  
   /*---------------------------------------------------------------------
    *  Common Narrow Frame Store Functions (excepting executeQuery)

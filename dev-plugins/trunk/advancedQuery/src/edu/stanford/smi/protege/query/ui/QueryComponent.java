@@ -140,7 +140,7 @@ public class QueryComponent extends JPanel {
 	 * @return Query 
 	 * @throws InvalidQueryException if the query is invalid - missing a slot of expression value
 	 */
-	public final VisitableQuery getQuery(int maxMatches) throws InvalidQueryException {
+	public final VisitableQuery getQuery() throws InvalidQueryException {
 		Slot slot = (Slot) selectSlot.getObject();
 		if (slot == null) {
 			JOptionPane.showMessageDialog(this, "Please choose a slot", "Choose a slot", JOptionPane.ERROR_MESSAGE);
@@ -148,10 +148,10 @@ public class QueryComponent extends JPanel {
 			throw new InvalidQueryException("A slot value is required");
 		}
 
-		return getQueryForType(slot, slot.getValueType(), maxMatches);
+		return getQueryForType(slot, slot.getValueType());
 	}
 	
-	protected VisitableQuery getQueryForType(Slot slot, ValueType type, int maxMatches) 
+	protected VisitableQuery getQueryForType(Slot slot, ValueType type) 
     throws InvalidQueryException {
 		VisitableQuery q = null;
 		String expr = getExpression();
@@ -164,14 +164,14 @@ public class QueryComponent extends JPanel {
 		}
 		
 		if (ValueType.ANY.equals(type) || ValueType.STRING.equals(type)) {
-			q = getStringQuery(slot, expr, maxMatches);
+			q = getStringQuery(slot, expr);
 		} else if (ValueType.BOOLEAN.equals(type) || ValueType.SYMBOL.equals(type) ||
 				   ValueType.INTEGER.equals(type) || ValueType.FLOAT.equals(type)) {
 			// TODO this doesn't work
-			q = new OwnSlotValueQuery(slot, expr, maxMatches);
+			q = new OwnSlotValueQuery(slot, expr);
 		} else if (ValueType.CLS.equals(type) || ValueType.INSTANCE.equals(type)) {
 			// TODO what should go here?
-			q = new OwnSlotValueQuery(slot, expr, maxMatches);
+			q = new OwnSlotValueQuery(slot, expr);
 		}
 		return q;
 	}
@@ -187,7 +187,7 @@ public class QueryComponent extends JPanel {
 		return expr;
 	}
 	
-	private VisitableQuery getStringQuery(Slot slot, String expr, int maxMatches) throws InvalidQueryException {
+	private VisitableQuery getStringQuery(Slot slot, String expr) throws InvalidQueryException {
 		VisitableQuery q;
 		String type = (String) getTypesComboBox().getSelectedItem();
 		
@@ -203,7 +203,7 @@ public class QueryComponent extends JPanel {
 				expr = "*" + expr;
 			}
 			//System.out.println("Searching for '" + expr + "'...");
-			q = new OwnSlotValueQuery(slot, expr, maxMatches);
+			q = new OwnSlotValueQuery(slot, expr);
 		}
 		return q;
 	}
@@ -516,7 +516,7 @@ public class QueryComponent extends JPanel {
     	CloseCallback callback = new CloseCallback() {
     		public boolean canClose(int result) {
     			try {
-					queryHolder[0] = comp.getQuery(AdvancedQueryPlugin.DEFAULT_MAX_MATCHES);
+					queryHolder[0] = comp.getQuery();
 				} catch (InvalidQueryException e) {
 					return false;
 				}
