@@ -6,6 +6,8 @@ public interface QueryVisitor {
     
     void visit(OrQuery q);
     
+    void visit(MaxMatchQuery q);
+    
     void visit(NestedOwnSlotValueQuery q);
     
     void visit(OWLRestrictionQuery q);

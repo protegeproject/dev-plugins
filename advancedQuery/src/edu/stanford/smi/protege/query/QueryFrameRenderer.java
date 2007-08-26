@@ -280,8 +280,8 @@ public class QueryFrameRenderer extends FrameRenderer implements QueryRenderer {
 	// tester
 	public static void main(String[] args) {
 		QueryFrameRenderer renderer = new QueryFrameRenderer();
-		OwnSlotValueQuery q1 = new OwnSlotValueQuery(null, "Chromosome", 5000);
-		OwnSlotValueQuery q2 = new OwnSlotValueQuery(null, "some", 5000);
+		OwnSlotValueQuery q1 = new OwnSlotValueQuery(null, "Chromosome");
+		OwnSlotValueQuery q2 = new OwnSlotValueQuery(null, "some");
 		ArrayList<VisitableQuery> queries = new ArrayList<VisitableQuery>(2);
 		queries.add(q1);
 		queries.add(q2);

@@ -6,9 +6,10 @@ import java.util.Iterator;
 import edu.stanford.smi.protege.model.KnowledgeBase;
 import edu.stanford.smi.protege.model.query.Query;
 
-public class OrQuery implements VisitableQuery {
+public class OrQuery implements VisitableQuery, BoundableQuery {
   
   Collection<VisitableQuery> disjuncts;
+  int maxMatches = KnowledgeBase.UNLIMITED_MATCHES;
 
   public OrQuery(Collection<VisitableQuery> disjuncts) {
     this.disjuncts = disjuncts;
@@ -21,7 +22,21 @@ public class OrQuery implements VisitableQuery {
   public Collection<VisitableQuery> getDisjuncts() {
     return disjuncts;
   }
+  
+  public int getMaxMatches() {
+	return maxMatches;
+  }
 
+  public void setMaxMatches(int maxMatches) {
+	  this.maxMatches = maxMatches;
+  }
+  
+  public OrQuery shallowClone() {
+	  OrQuery q = new OrQuery(disjuncts);
+	  q.setMaxMatches(getMaxMatches());
+	  return q;
+  }
+  
   public void localize(KnowledgeBase kb) {
     for (Query q : disjuncts) {
       q.localize(kb);
