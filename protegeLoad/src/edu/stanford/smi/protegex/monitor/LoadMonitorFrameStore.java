@@ -95,8 +95,10 @@ public class LoadMonitorFrameStore extends AbstractFrameStoreInvocationHandler {
     @Override
     protected void executeQuery(Query q, QueryCallback qc) {
         busy();
+        // Unclear that this should be busy until the callback
+        // Other threads can make this go idle anyway.
         getDelegate().executeQuery(q, qc);
-        idle();  // fix thhis later...
+        idle();
     }
 
     @Override
@@ -146,7 +148,7 @@ public class LoadMonitorFrameStore extends AbstractFrameStoreInvocationHandler {
      * So it is a significant overhead if it occured on each knowledge base call.
      */
     private void setButtonColor(Color c) {
-        if (!enabled) return;
+        if (!enabled || monitorButton == null) return;
         Rectangle r = monitorButton.getBounds();
         r.x=0;
         r.y=0;
