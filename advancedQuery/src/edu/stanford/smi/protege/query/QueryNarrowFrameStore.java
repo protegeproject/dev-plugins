@@ -442,9 +442,4 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
   public TransactionMonitor getTransactionStatusMonitor() {
     return delegate.getTransactionStatusMonitor();
   }
-
-  public void reinitialize() {
-      delegate.reinitialize();
-  }
-
 }
