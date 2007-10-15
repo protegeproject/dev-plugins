@@ -8,6 +8,7 @@ import java.util.Map;
 import javax.swing.table.AbstractTableModel;
 
 import edu.stanford.smi.protege.server.RemoteSession;
+import edu.stanford.smi.protege.server.Session;
 import edu.stanford.smi.protege.server.framestore.background.FrameCalculatorStats;
 
 public class UserInfoTable extends AbstractTableModel {
@@ -76,6 +77,10 @@ public class UserInfoTable extends AbstractTableModel {
     default:
       throw new UnsupportedOperationException("Programmer Error");  
     }
+  }
+  
+  public RemoteSession getSession(int row) {
+      return sessions.get(row);
   }
   
   public String getColumnName(int colIndex) {
