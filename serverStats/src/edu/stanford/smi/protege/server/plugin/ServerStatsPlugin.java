@@ -8,6 +8,7 @@ import java.util.Collection;
 
 import javax.swing.JButton;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
@@ -18,19 +19,25 @@ import edu.stanford.smi.protege.model.DefaultKnowledgeBase;
 import edu.stanford.smi.protege.model.KnowledgeBase;
 import edu.stanford.smi.protege.model.Project;
 import edu.stanford.smi.protege.resource.Icons;
+import edu.stanford.smi.protege.server.RemoteSession;
 import edu.stanford.smi.protege.server.framestore.RemoteClientFrameStore;
 import edu.stanford.smi.protege.server.framestore.RemoteClientStats;
 import edu.stanford.smi.protege.server.framestore.background.FrameCalculatorStats;
+import edu.stanford.smi.protege.server.metaproject.Operation;
+import edu.stanford.smi.protege.server.metaproject.impl.OperationImpl;
 import edu.stanford.smi.protege.util.transaction.TransactionIsolationLevel;
 import edu.stanford.smi.protege.widget.AbstractTabWidget;
 
 // an example tab
 public class ServerStatsPlugin extends AbstractTabWidget {
+  public static final Operation KILL_OTHER_USER_SESSION = new OperationImpl("KillOtherUserSession");
 
   /**
    * 
    */
   private static final long serialVersionUID = -7384785943184573895L;
+  
+  private boolean debugServerCheck = false;
   private UserInfoTable userInfo;
   private JTable userInfoTable;
 
@@ -42,6 +49,11 @@ public class ServerStatsPlugin extends AbstractTabWidget {
   
   private JButton refreshButton;
   private JButton clearCacheButton;
+  private JButton killClientButton;
+  
+  public void setDebugServerCheck(boolean debugServerCheck) {
+      this.debugServerCheck = debugServerCheck;
+  }
   
   public void initialize() {
     setLabel("Server Stats");
@@ -49,6 +61,7 @@ public class ServerStatsPlugin extends AbstractTabWidget {
     
     createRefreshButton();
     createClearCacheButton();
+    createKillClientButton();
     layoutUI();
     refresh();
   }
@@ -66,6 +79,7 @@ public class ServerStatsPlugin extends AbstractTabWidget {
     JPanel buttonArea = new JPanel(new GridLayout(1,2));
     buttonArea.add(refreshButton);
     buttonArea.add(clearCacheButton);
+    buttonArea.add(killClientButton);
     add(buttonArea, BorderLayout.SOUTH);
   }
   
@@ -114,6 +128,39 @@ public class ServerStatsPlugin extends AbstractTabWidget {
         refresh();
       }
     });
+  }
+  
+  private void createKillClientButton() {
+      killClientButton = new JButton("Kill Client Button");
+      killClientButton.addActionListener(new ActionListener() {
+
+          public void actionPerformed(ActionEvent e) {
+              int row = userInfoTable.getSelectedRow();
+              if (row < 0) return;
+              RemoteSession session = userInfo.getSession(row);
+              if (!debugServerCheck && !isKillAllowed(session)) {
+                  JOptionPane.showMessageDialog(userInfoTable, "Not permitted to kill user session belonging to " + session.getUserName());
+                  return;
+              }
+              int kill = 
+                  JOptionPane.showConfirmDialog(userInfoTable, "Kill session for user " + session.getUserName() + 
+                                                "? This user may lose work as a result of this",
+                                                "Confirm Kill Session",
+                                                JOptionPane.OK_CANCEL_OPTION);
+              if (kill == 0) {
+                  new KillUserSessionJob(session, getKnowledgeBase()).execute();
+                  refresh();
+              }
+              
+          }
+      });
+  }
+  
+  private boolean isKillAllowed(RemoteSession session) {
+      KnowledgeBase kb = getKnowledgeBase();
+      String me = kb.getUserName();
+      return RemoteClientFrameStore.isOperationAllowed(kb, KILL_OTHER_USER_SESSION) ||
+                  (me != null && me.equals(session.getUserName()));
   }
   
   private JTextField createOutputTextField(int size) {
