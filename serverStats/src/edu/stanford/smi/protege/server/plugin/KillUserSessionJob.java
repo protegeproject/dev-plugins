@@ -19,11 +19,11 @@ import edu.stanford.smi.protege.util.Log;
 import edu.stanford.smi.protege.util.ProtegeJob;
 
 public class KillUserSessionJob extends ProtegeJob {
-    private RemoteSession sessionToKill;
+    private RemoteSession prototypeSessionToKill;
     
     public KillUserSessionJob(RemoteSession session, KnowledgeBase kb) {
         super(kb);
-        this.sessionToKill = session;
+        this.prototypeSessionToKill = session;
     }
 
 
@@ -31,22 +31,33 @@ public class KillUserSessionJob extends ProtegeJob {
         if (!isAllowed()) {
             return Boolean.FALSE;
         }
-        boolean failures = false;
+        boolean allSucceeded = true;
         Server server = Server.getInstance();
-        Collection<ServerProject> projects = server.getCurrentProjects(sessionToKill);
-        if (projects == null) {
-            return Boolean.TRUE;
+        for (RemoteSession sessionToKill : new ArrayList<RemoteSession>(server.getCurrentSessions())) {
+            if (prototypeSessionToKill.getUserName().equals(sessionToKill.getUserName()) &&
+                    prototypeSessionToKill.getSessionGroup() == sessionToKill.getSessionGroup()) {
+                allSucceeded =  allSucceeded && killSession(server, sessionToKill);                
+            }
         }
+        return Boolean.valueOf(allSucceeded);
+    }
+    
+    private boolean killSession(Server server, RemoteSession session) {
+        Collection<ServerProject> projects = server.getCurrentProjects(session);
+        if (projects == null) {
+            return true;
+        }
+        boolean allSucceeded  = true;
         projects = new ArrayList<ServerProject>(projects);
         for (ServerProject project : projects) {
             try {
-                project.close(sessionToKill);
+                project.close(session);
             } catch (ServerSessionLost e) {
                 Log.getLogger().log(Level.WARNING, "Could not close session", e);
-                failures = true;
+                allSucceeded = false;
             }
         }
-        return Boolean.valueOf(!failures);
+        return allSucceeded;
     }
 
     private boolean isAllowed() {
@@ -56,7 +67,7 @@ public class KillUserSessionJob extends ProtegeJob {
         RemoteServerFrameStore fs = serverProject.getDomainKbFrameStore(mySession);
 
         try {
-            return sessionToKill.getUserName().equals(mySession.getUserName()) || 
+            return prototypeSessionToKill.getUserName().equals(mySession.getUserName()) || 
                 fs.getAllowedOperations(mySession).contains(ServerStatsPlugin.KILL_OTHER_USER_SESSION);
         } catch (RemoteException e) {
             Log.getLogger().log(Level.WARNING, "Caught Exception trying to check permissions", e);
