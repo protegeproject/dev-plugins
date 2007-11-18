@@ -15,6 +15,7 @@ import javax.swing.JList;
 
 import edu.stanford.smi.protege.model.query.Query;
 import edu.stanford.smi.protege.query.querytypes.AndQuery;
+import edu.stanford.smi.protege.query.querytypes.MaxMatchQuery;
 import edu.stanford.smi.protege.query.querytypes.OWLRestrictionQuery;
 import edu.stanford.smi.protege.query.querytypes.OrQuery;
 import edu.stanford.smi.protege.query.querytypes.OwnSlotValueQuery;
@@ -57,6 +58,15 @@ public class QueryResourceRenderer extends ResourceRenderer implements QueryRend
 		this.oldFont = null;
 		this.oldMetrics = null;
 		this.oldColor = null;
+	}
+	
+	@Override
+	public void load(Object o) {
+		if (o instanceof NamedFrame) {
+			super.load(((NamedFrame) o).getBrowserText());
+		} else {
+			super.load(o);
+		}
 	}
 
 	/**
@@ -119,6 +129,9 @@ public class QueryResourceRenderer extends ResourceRenderer implements QueryRend
 				setQuery(query);
 			}
 			appendQuery = false;
+		} else if (q instanceof MaxMatchQuery) {
+		    MaxMatchQuery maxMatchQuery = (MaxMatchQuery) q;
+		    setQuery(maxMatchQuery.getInnerQuery());
 		} else if (q instanceof OwnSlotValueQuery) {
 			OwnSlotValueQuery ownQuery = (OwnSlotValueQuery) q;
 			setQueryString(ownQuery.getExpr());
