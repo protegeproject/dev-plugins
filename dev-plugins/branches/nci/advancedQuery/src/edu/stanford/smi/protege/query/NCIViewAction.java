@@ -19,8 +19,9 @@ import edu.stanford.smi.protege.widget.TabWidget;
  * @date 25-Sep-06
  */
 public class NCIViewAction extends NCIEditAction {
-
-	private static final String EDITDIALOG = "gov.nih.nci.protegex.edit.EditDialog";
+    private static final long serialVersionUID = 5448458765705987925L;
+    
+    private static final String EDITDIALOG = "gov.nih.nci.protegex.edit.EditDialog";
 
 	public NCIViewAction(String text, Selectable selectable, Icon icon) {
 		super(text, selectable, icon);
@@ -54,16 +55,6 @@ public class NCIViewAction extends NCIEditAction {
 					System.err.println("Warning - couldn't open the EditDialog for " + cls);
 					t.printStackTrace();
 				}
-									
-				// dependency on NCI code
-				/*
-				try {
-		        	new EditDialog((NCIEditTab) tab, cls);
-				} catch (Throwable t) {
-					System.err.println("Warning - couldn't open the EditDialog for " + cls);
-				}
-				*/
-				
 				projectView.setCursor(oldCursor);
 			}
 		});
