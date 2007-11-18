@@ -2,6 +2,8 @@ package edu.stanford.smi.protege.query;
 
 import java.awt.Cursor;
 import java.lang.reflect.Method;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import javax.swing.Icon;
 import javax.swing.SwingUtilities;
@@ -10,6 +12,7 @@ import edu.stanford.smi.protege.model.Cls;
 import edu.stanford.smi.protege.plugin.PluginUtilities;
 import edu.stanford.smi.protege.ui.ProjectManager;
 import edu.stanford.smi.protege.ui.ProjectView;
+import edu.stanford.smi.protege.util.Log;
 import edu.stanford.smi.protege.util.Selectable;
 import edu.stanford.smi.protege.util.ViewAction;
 import edu.stanford.smi.protege.widget.TabWidget;
@@ -22,8 +25,10 @@ import edu.stanford.smi.protege.widget.TabWidget;
  * @date 25-Sep-06
  */
 public class NCIEditAction extends ViewAction {
-
-	protected static final String NCITAB = "gov.nih.nci.protegex.edit.NCIEditTab";
+    private static final long serialVersionUID = -467306134442853966L;
+    
+    private static final Logger log = Log.getLogger(NCIEditAction.class);
+    protected static final String NCITAB = "gov.nih.nci.protegex.edit.NCIEditTab";
 
 	protected NCIEditAction(String text, Selectable selectable, Icon icon) {
 		super(text, selectable, icon);
@@ -45,8 +50,10 @@ public class NCIEditAction extends ViewAction {
     public void onView(final Object o) {
 		ProjectView projectView = ProjectManager.getProjectManager().getCurrentProjectView();
 		TabWidget tab = (TabWidget) projectView.getTabByClassName(NCITAB);
-		if (tab != null) {
-			performAction(tab, projectView, (Cls) o);
+		if (tab != null && o instanceof NamedFrame) {
+		    NamedFrame frame = (NamedFrame) o;
+		    if (frame.getFrame() instanceof Cls);
+			performAction(tab, projectView, (Cls) frame.getFrame());
 		}
 	}
     
@@ -70,21 +77,10 @@ public class NCIEditAction extends ViewAction {
 					setSelectedClsMethod.invoke(clsPanel, new Object[] { cls });
 				} catch (Throwable t) {
 					System.err.println("Warning - couldn't view the selected Cls in the NCIEditTab");
-					//t.printStackTrace();
-				}
-									
-				// dependency on NCI code
-				/*
-				try {
-					if (tab instanceof NCIEditTab) {
-						NCIEditTab nciTab = (NCIEditTab) tab;
-						nciTab.getClassPanel().setSelectedCls(cls);
+					if (log.isLoggable(Level.FINE)) {
+					    log.log(Level.FINE, "Exception caught trying to view class", t);
 					}
-				} catch (Throwable e) {
-					System.err.println("Warning - couldn't view the selected Cls in the NCIEditTab");
-					//e.printStackTrace();
 				}
-				*/
 				
 				projectView.setCursor(oldCursor);
 			}
@@ -95,8 +91,14 @@ public class NCIEditAction extends ViewAction {
 	@Override
     public void onSelectionChange() {
     	if (!getSelection().isEmpty()) {
-        	setAllowed(getSelection().iterator().next() instanceof Cls);
+    	    Object selection = getSelection().iterator().next();
+    	    if (selection instanceof NamedFrame) {
+    	        NamedFrame nframe = (NamedFrame) selection;
+    	        setAllowed(nframe.getFrame() instanceof Cls);
+    	        return;
+    	    }
     	}
+    	setAllowed(false);
     }
 
 }
