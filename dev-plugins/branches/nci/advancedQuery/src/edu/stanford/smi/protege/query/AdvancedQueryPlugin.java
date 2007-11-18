@@ -8,6 +8,7 @@ import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 import java.util.Vector;
 
@@ -26,7 +27,6 @@ import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.SwingUtilities;
 
-import edu.stanford.smi.protege.model.Frame;
 import edu.stanford.smi.protege.model.KnowledgeBase;
 import edu.stanford.smi.protege.model.Slot;
 import edu.stanford.smi.protege.model.framestore.NarrowFrameStore;
@@ -467,10 +467,11 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 	 * @see KnowledgeBase#executeQuery(Query)
 	 * @return int number of hits for the query
 	 */
+	@SuppressWarnings("unchecked")
 	private int doQuery(Query q) {
-		Set<Frame> results = null;
+		List<NamedFrame> results = null;
 		if (q != null) {
-			results = kb.executeQuery(q);
+			results = (List<NamedFrame>) (new QueryJob(kb, q)).execute();
 		}
 		int hits = (results != null ? results.size() : 0);
 		if (hits == 0) {
@@ -478,7 +479,7 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 			lstResults.setListData(new String[] { "No results found." });
 		} else {
 			queryRenderer.setQuery(q);		// bold the matching results 
-			lstResults.setListData(new Vector<Frame>(results));
+			lstResults.setListData(new Vector<NamedFrame>(results));
 			lstResults.setSelectedIndex(0);
 		}
 		return hits;
