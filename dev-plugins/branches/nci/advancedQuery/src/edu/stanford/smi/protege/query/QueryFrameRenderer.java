@@ -58,6 +58,15 @@ public class QueryFrameRenderer extends FrameRenderer implements QueryRenderer {
 		this.oldColor = null;
 	}
 	
+	@Override
+	public void load(Object o) {
+		if (o instanceof NamedFrame) {
+			super.load(((NamedFrame) o).getBrowserText());
+		} else {
+			super.load(o);
+		}
+	}
+	
 	/* (non-Javadoc)
 	 * @see edu.stanford.smi.protege.query.QueryRenderer#setMatchColor(java.awt.Color)
 	 */
