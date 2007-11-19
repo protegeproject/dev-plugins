@@ -57,6 +57,9 @@ public class ServerStatsPlugin extends AbstractTabWidget {
   
   public void initialize() {
     setLabel("Server Stats");
+	if (!getKnowledgeBase().getProject().isMultiUserClient()) {
+	    return;
+	}
     setIcon(Icons.getInstanceIcon());
     
     createRefreshButton();
