@@ -11,23 +11,30 @@ public class NamedFrame implements Serializable, Comparable<NamedFrame>, Localiz
 	private static final long serialVersionUID = -4865927039683192271L;
 	private String browserText;
 	private Frame frame;
+	private boolean deprecated;
 	
-	public NamedFrame(String browserText, Frame frame) {
+	public NamedFrame(String browserText, boolean deprecated, Frame frame) {
 		super();
 		this.browserText = browserText;
+		this.deprecated = deprecated;
 		this.frame = frame;
 	}
 
 	public String getBrowserText() {
 		return browserText;
 	}
-
+    
+    public boolean isDeprecated() {
+        return deprecated;
+    }
+    
 	public Frame getFrame() {
 		return frame;
 	}
 
+
 	public int compareTo(NamedFrame o) {
-		return browserText.compareTo(o.getBrowserText());
+		return browserText.toLowerCase().compareTo(o.getBrowserText().toLowerCase());
 	}
 
 	public void localize(KnowledgeBase kb) {
