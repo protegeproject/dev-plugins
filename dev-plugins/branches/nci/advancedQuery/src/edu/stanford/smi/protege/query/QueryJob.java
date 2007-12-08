@@ -5,6 +5,11 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
+import edu.stanford.smi.protegex.owl.model.Deprecatable;
+import edu.stanford.smi.protegex.owl.model.OWLClass;
+import edu.stanford.smi.protegex.owl.model.OWLNamedClass;
+import edu.stanford.smi.protegex.owl.model.RDFResource;
+
 import edu.stanford.smi.protege.exception.ProtegeException;
 import edu.stanford.smi.protege.model.DefaultKnowledgeBase;
 import edu.stanford.smi.protege.model.Frame;
@@ -35,7 +40,11 @@ public class QueryJob extends ProtegeJob {
 	        Set<Frame> frames = getKnowledgeBase().executeQuery(q);
 	        List<NamedFrame> namedFrames = new ArrayList<NamedFrame>();
 	        for (Frame frame : frames) {
-	            namedFrames.add(new NamedFrame(frame.getBrowserText(), frame));
+                    boolean deprecated = false;
+                    if (frame instanceof Deprecatable) {
+ 		        deprecated = ((Deprecatable) frame).isDeprecated();
+ 		    }
+	            namedFrames.add(new NamedFrame(frame.getBrowserText(), deprecated, frame));
 	        }
 	        Collections.sort(namedFrames);
 	        return namedFrames;
