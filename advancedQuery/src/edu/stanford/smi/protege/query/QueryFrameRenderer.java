@@ -61,7 +61,9 @@ public class QueryFrameRenderer extends FrameRenderer implements QueryRenderer {
 	@Override
 	public void load(Object o) {
 		if (o instanceof NamedFrame) {
-			super.load(((NamedFrame) o).getBrowserText());
+		    NamedFrame namedFrame = (NamedFrame) o;
+		    String text = namedFrame.getBrowserText();
+			super.load(text);
 		} else {
 			super.load(o);
 		}

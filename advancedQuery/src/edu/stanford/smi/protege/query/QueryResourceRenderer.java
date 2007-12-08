@@ -63,7 +63,12 @@ public class QueryResourceRenderer extends ResourceRenderer implements QueryRend
 	@Override
 	public void load(Object o) {
 		if (o instanceof NamedFrame) {
-			super.load(((NamedFrame) o).getBrowserText());
+            NamedFrame namedFrame = (NamedFrame) o;
+            String text = namedFrame.getBrowserText();
+            if (namedFrame.isDeprecated()) {
+                text = "[D] " + text;
+            }
+            super.load(text);
 		} else {
 			super.load(o);
 		}
