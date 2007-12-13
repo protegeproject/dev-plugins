@@ -1,5 +1,6 @@
 <?xml version = "1.0" encoding = "utf-8"?>
-<project name = "Query Plugin" default = "dist" basedir = ".">    
+<project name = "Query Plugin" default = "dist" basedir = "."> 
+	<property file="build.properties"/>
    <property environment="env"/>
    <property name="protege.home" value="${env.PROTEGE_HOME}"/>
 
