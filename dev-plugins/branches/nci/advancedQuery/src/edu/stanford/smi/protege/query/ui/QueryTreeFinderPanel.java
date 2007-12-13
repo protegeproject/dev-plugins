@@ -44,6 +44,8 @@ import edu.stanford.smi.protege.util.StandardAction;
 import edu.stanford.smi.protegex.owl.ui.ProtegeUI;
 import edu.stanford.smi.protegex.owl.ui.dialogs.ModalDialogFactory;
 
+import edu.stanford.smi.protege.query.NamedFrame;
+
 
 /**
  * This class instantiates the Advanced Query Plugin, so that it can be called
@@ -141,7 +143,7 @@ public class QueryTreeFinderPanel extends JPanel implements Disposable {
 				{
 					Iterator it = c.iterator();
 					Object obj = it.next();
-					selectedCls = (Cls) obj;
+					selectedCls = (Cls) ((NamedFrame) obj).getFrame();
 					setExpandedCls(selectedCls, c);
 				}
 			}
