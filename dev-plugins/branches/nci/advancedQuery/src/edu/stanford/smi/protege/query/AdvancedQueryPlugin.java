@@ -27,6 +27,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.SwingUtilities;
 
+import edu.stanford.smi.protege.model.Frame;
 import edu.stanford.smi.protege.model.KnowledgeBase;
 import edu.stanford.smi.protege.model.Slot;
 import edu.stanford.smi.protege.model.framestore.NarrowFrameStore;
@@ -479,10 +480,26 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 			lstResults.setListData(new String[] { "No results found." });
 		} else {
 			queryRenderer.setQuery(q);		// bold the matching results 
-			lstResults.setListData(new Vector<NamedFrame>(results));
+			//GF12365: Fixed ClassCastException within protege-core's
+			//  ListFinder.getMatches method.
+			lstResults.setListData(convertToFrames(new Vector<NamedFrame>(results)));
 			lstResults.setSelectedIndex(0);
 		}
 		return hits;
+	}
+	
+	/**
+	 * Converts a list of NameFrames to a list of Frames.
+	 * @return a list of Frames. 
+	 */
+	private Vector<Frame> convertToFrames(Vector<NamedFrame> list) {
+	    if (list == null)
+	        return null;
+	    
+	    Vector<Frame> frameList = new Vector<Frame>();
+        for (int i=0; i<list.size(); ++i)
+	        frameList.add(((NamedFrame) list.get(i)).getFrame());
+	    return frameList;
 	}
 
 	public Slot getDefaultSlot() {
