@@ -9,6 +9,7 @@ import javax.swing.Icon;
 import javax.swing.SwingUtilities;
 
 import edu.stanford.smi.protege.model.Cls;
+import edu.stanford.smi.protege.model.Frame;
 import edu.stanford.smi.protege.plugin.PluginUtilities;
 import edu.stanford.smi.protege.ui.ProjectManager;
 import edu.stanford.smi.protege.ui.ProjectView;
@@ -52,8 +53,15 @@ public class NCIEditAction extends ViewAction {
 		TabWidget tab = (TabWidget) projectView.getTabByClassName(NCITAB);
 		if (tab != null && o instanceof NamedFrame) {
 		    NamedFrame frame = (NamedFrame) o;
-		    if (frame.getFrame() instanceof Cls);
-			performAction(tab, projectView, (Cls) frame.getFrame());
+		    if (frame.getFrame() instanceof Cls)
+		        performAction(tab, projectView, (Cls) frame.getFrame());
+		}
+        //GF12365: Because we converted NamedFrame to Frame in
+        //  AdvancedQueryPlugin.doQuery, we have to handle this
+        //  Frame case.
+		else if (tab != null && o instanceof Frame) {
+            if (o instanceof Cls)
+                performAction(tab, projectView, (Cls) o);
 		}
 	}
     
@@ -97,6 +105,13 @@ public class NCIEditAction extends ViewAction {
     	        setAllowed(nframe.getFrame() instanceof Cls);
     	        return;
     	    }
+    	    //GF12365: Because we converted NamedFrame to Frame in
+    	    //  AdvancedQueryPlugin.doQuery, we have to handle this
+    	    //  Frame case.
+            if (selection instanceof Frame) {
+                setAllowed((Frame) selection instanceof Cls);
+                return;
+            }
     	}
     	setAllowed(false);
     }
