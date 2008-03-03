@@ -143,7 +143,12 @@ public class QueryTreeFinderPanel extends JPanel implements Disposable {
 				{
 					Iterator it = c.iterator();
 					Object obj = it.next();
-					selectedCls = (Cls) ((NamedFrame) obj).getFrame();
+//					GF12365: Because we converted NamedFrame to Frame in
+			        //  AdvancedQueryPlugin.doQuery, we have to handle this
+			        //  Frame case.
+					if (obj instanceof NamedFrame)
+			            selectedCls = (Cls) ((NamedFrame) obj).getFrame();
+			        else selectedCls = (Cls) obj;
 					setExpandedCls(selectedCls, c);
 				}
 			}
