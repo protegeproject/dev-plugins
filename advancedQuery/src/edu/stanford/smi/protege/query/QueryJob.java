@@ -23,8 +23,6 @@ import edu.stanford.smi.protege.util.ProtegeJob;
 public class QueryJob extends ProtegeJob {
 	private static final long serialVersionUID = 8985897197800156441L;
 	
-	private FrameCalculator frameCalculator;
-	
 	private Query q;
 
 	public QueryJob(KnowledgeBase kb, Query q) {
@@ -34,44 +32,30 @@ public class QueryJob extends ProtegeJob {
 
 	@Override
 	public Object run() throws ProtegeException {
-	    lookupFrameCalculator();
-	    disableCaching();
+	    setCachingEnabled(false);
 	    try {
 	        Set<Frame> frames = getKnowledgeBase().executeQuery(q);
 	        List<NamedFrame> namedFrames = new ArrayList<NamedFrame>();
 	        for (Frame frame : frames) {
-                    boolean deprecated = false;
-                    if (frame instanceof Deprecatable) {
- 		        deprecated = ((Deprecatable) frame).isDeprecated();
- 		    }
+	            boolean deprecated = false;
+	            if (frame instanceof Deprecatable) {
+	                deprecated = ((Deprecatable) frame).isDeprecated();
+	            }
 	            namedFrames.add(new NamedFrame(frame.getBrowserText(), deprecated, frame));
 	        }
 	        Collections.sort(namedFrames);
 	        return namedFrames;
-	    } finally {
-	        enableCaching();
+	    }
+	    finally {
+	        setCachingEnabled(true);
 	    }
 	}
 	
-	public void lookupFrameCalculator() {
-	    if (frameCalculator == null) {
-	        KnowledgeBase kb = getKnowledgeBase();
-	        FrameStoreManager fsm = ((DefaultKnowledgeBase) kb).getFrameStoreManager();
-	        FrameCalculatorFrameStore fcfs = (FrameCalculatorFrameStore) fsm.getFrameStoreFromClass(FrameCalculatorFrameStore.class);
-	        if (fcfs != null) frameCalculator = fcfs.getFrameCalculator();
-	    }
-	}
-	
-	public void disableCaching() {
-	    if (frameCalculator != null) {
-	        frameCalculator.setCachingEnabled(false);
-	    }
+	private void setCachingEnabled(boolean cachingEnabled) {
+	    FrameStoreManager fsm = getKnowledgeBase().getFrameStoreManager();
+	    FrameCalculatorFrameStore fcfs = fsm.getFrameStoreFromClass(FrameCalculatorFrameStore.class);
+	    fsm.setEnabled(fcfs, cachingEnabled);
 	}
 
-	public void enableCaching() {
-	    if (frameCalculator != null) {
-	        frameCalculator.setCachingEnabled(true);
-	    }
-	}
 	
 }

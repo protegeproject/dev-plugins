@@ -296,10 +296,6 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
     return delegate;
   }
 
-  public FrameID generateFrameID() {
-    return delegate.generateFrameID();
-  }
-
   public int getFrameCount() {
     return delegate.getFrameCount();
   }
@@ -440,6 +436,14 @@ public class QueryNarrowFrameStore implements NarrowFrameStore {
   }
 
   public TransactionMonitor getTransactionStatusMonitor() {
-    return delegate.getTransactionStatusMonitor();
+      return delegate.getTransactionStatusMonitor();
+  }
+
+  public void reinitialize() {
+      delegate.reinitialize();
+  }
+
+  public void replaceFrame(Frame original, Frame replacement) {
+      delegate.replaceFrame(original, replacement);
   }
 }

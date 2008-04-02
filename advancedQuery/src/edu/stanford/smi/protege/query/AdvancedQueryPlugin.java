@@ -41,7 +41,7 @@ import edu.stanford.smi.protege.query.ui.QueryUtil;
 import edu.stanford.smi.protege.resource.Icons;
 import edu.stanford.smi.protege.server.framestore.RemoteClientFrameStore;
 import edu.stanford.smi.protege.server.metaproject.Operation;
-import edu.stanford.smi.protege.server.metaproject.impl.OperationImpl;
+import edu.stanford.smi.protege.server.metaproject.impl.UnbackedOperationImpl;
 import edu.stanford.smi.protege.ui.ListFinder;
 import edu.stanford.smi.protege.util.AdvancedQueryPluginDefaults;
 import edu.stanford.smi.protege.util.ComponentFactory;
@@ -76,7 +76,7 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 	
 	private static final long serialVersionUID = -5589620508506925170L;
 
-	public static final Operation INDEX_OPERATION = new OperationImpl("Generate Lucene Indices");
+	public static final Operation INDEX_OPERATION = new UnbackedOperationImpl("Generate Lucene Indices", null);
 
 	private KnowledgeBase kb;
 	private Collection<Slot> slots;
