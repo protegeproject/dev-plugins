@@ -24,13 +24,13 @@ import edu.stanford.smi.protege.server.framestore.RemoteClientFrameStore;
 import edu.stanford.smi.protege.server.framestore.RemoteClientStats;
 import edu.stanford.smi.protege.server.framestore.background.FrameCalculatorStats;
 import edu.stanford.smi.protege.server.metaproject.Operation;
-import edu.stanford.smi.protege.server.metaproject.impl.OperationImpl;
+import edu.stanford.smi.protege.server.metaproject.impl.UnbackedOperationImpl;
 import edu.stanford.smi.protege.util.transaction.TransactionIsolationLevel;
 import edu.stanford.smi.protege.widget.AbstractTabWidget;
 
 // an example tab
 public class ServerStatsPlugin extends AbstractTabWidget {
-  public static final Operation KILL_OTHER_USER_SESSION = new OperationImpl("KillOtherUserSession");
+  public static final Operation KILL_OTHER_USER_SESSION = new UnbackedOperationImpl("KillOtherUserSession", null);
 
   /**
    * 
