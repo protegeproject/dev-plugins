@@ -6,8 +6,10 @@ import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.event.ActionEvent;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.Vector;
@@ -27,7 +29,9 @@ import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.SwingUtilities;
 
+import edu.stanford.smi.protege.action.ExportToCsvAction;
 import edu.stanford.smi.protege.model.Frame;
+import edu.stanford.smi.protege.model.Instance;
 import edu.stanford.smi.protege.model.KnowledgeBase;
 import edu.stanford.smi.protege.model.Slot;
 import edu.stanford.smi.protege.model.framestore.NarrowFrameStore;
@@ -44,6 +48,7 @@ import edu.stanford.smi.protege.server.metaproject.Operation;
 import edu.stanford.smi.protege.server.metaproject.impl.OperationImpl;
 import edu.stanford.smi.protege.ui.ListFinder;
 import edu.stanford.smi.protege.util.AdvancedQueryPluginDefaults;
+import edu.stanford.smi.protege.util.CollectionUtilities;
 import edu.stanford.smi.protege.util.ComponentFactory;
 import edu.stanford.smi.protege.util.ComponentUtilities;
 import edu.stanford.smi.protege.util.DoubleClickActionAdapter;
@@ -87,9 +92,10 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 	
 	private ViewAction viewAction;
 	private ViewAction editAction;
+	
 	private JButton viewButton;
 	private JButton editButton;
-
+	
 	private ListPanel queriesListPanel;
 	private SelectableList lstResults;
 	private JRadioButton btnAndQuery;
@@ -173,12 +179,17 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 		viewButton = resultsComponent.addHeaderButton(getEditAction());	// won't be null
 		editButton = resultsComponent.addHeaderButton(getViewAction());	// might be null
 		
+		if (RemoteClientFrameStore.isOperationAllowed(getKnowledgeBase(), ExportToCsvAction.EXPORT_TO_CSV_OPERATION)) {
+			resultsComponent.addHeaderButton(createExportAction());
+		}
+		
 		JSplitPane splitter = ComponentFactory.createLeftRightSplitPane();
 		splitter.setLeftComponent(lcLeft);
 		splitter.setRightComponent(resultsComponent);
         add(splitter, BorderLayout.CENTER);
 	}
 	
+
 	private Action getEditAction() {
 		if (editAction == null) {
 			if (NCIEditAction.isValid()) {
@@ -202,6 +213,40 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 		return viewAction;
 	}
 
+	
+	private Action createExportAction() {
+		return new ExportToCsvAction(getKnowledgeBase()) {
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+				Collection results = ComponentUtilities.getListValues(lstResults);
+				
+				// filter out non-instance results
+				for (Iterator iterator = results.iterator(); iterator.hasNext();) {
+					Object object = (Object) iterator.next();
+					if (!(object instanceof Instance)) {
+						iterator.remove();
+					}
+				}
+				
+				setInstancesToExport(results);
+				setSlotsToExport(getPossibleExportSlots());
+				super.actionPerformed(arg0);
+			}
+			
+			
+			private Collection<Slot> getPossibleExportSlots() {
+				ArrayList<Slot> slots = new ArrayList<Slot>();				
+				if (isOWL) {
+					OWLModel owlModel = (OWLModel) kb;
+					slots.add(owlModel.getRDFSLabelProperty());
+					slots.add(owlModel.getRDFSCommentProperty());
+				}				
+				return slots;		
+			}
+		};
+	}
+
+	
 	/**
 	 * Adds the "Index Ontology" button to the given LabeledComponent.
 	 * When clicked it will create an index of the ontology and displays an infinitely looping
