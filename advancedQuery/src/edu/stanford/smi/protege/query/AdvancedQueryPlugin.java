@@ -30,8 +30,8 @@ import javax.swing.JSplitPane;
 import javax.swing.SwingUtilities;
 
 import edu.stanford.smi.protege.action.ExportToCsvAction;
+import edu.stanford.smi.protege.action.ExportToCsvUtil;
 import edu.stanford.smi.protege.model.Frame;
-import edu.stanford.smi.protege.model.Instance;
 import edu.stanford.smi.protege.model.KnowledgeBase;
 import edu.stanford.smi.protege.model.Slot;
 import edu.stanford.smi.protege.model.framestore.NarrowFrameStore;
@@ -48,7 +48,6 @@ import edu.stanford.smi.protege.server.metaproject.Operation;
 import edu.stanford.smi.protege.server.metaproject.impl.OperationImpl;
 import edu.stanford.smi.protege.ui.ListFinder;
 import edu.stanford.smi.protege.util.AdvancedQueryPluginDefaults;
-import edu.stanford.smi.protege.util.CollectionUtilities;
 import edu.stanford.smi.protege.util.ComponentFactory;
 import edu.stanford.smi.protege.util.ComponentUtilities;
 import edu.stanford.smi.protege.util.DoubleClickActionAdapter;
@@ -62,6 +61,7 @@ import edu.stanford.smi.protege.util.ViewAction;
 import edu.stanford.smi.protege.widget.AbstractTabWidget;
 import edu.stanford.smi.protege.widget.TabWidget;
 import edu.stanford.smi.protegex.owl.model.OWLModel;
+import edu.stanford.smi.protegex.owl.model.OWLNamedClass;
 import edu.stanford.smi.protegex.owl.ui.icons.OWLIcons;
 import edu.stanford.smi.protegex.owl.ui.icons.OverlayIcon;
 
@@ -215,25 +215,29 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 
 	
 	private Action createExportAction() {
+		//initialize NCI defaults for export configuration
+		ExportToCsvUtil.setSlotsDelimiter(",");
+		ExportToCsvUtil.setSlotValuesDelimiter("|");
+		ExportToCsvUtil.setExportBrowserText(false);
+		
 		return new ExportToCsvAction(getKnowledgeBase()) {
 			@Override
-			public void actionPerformed(ActionEvent arg0) {
+			public void actionPerformed(ActionEvent event) {
 				Collection results = ComponentUtilities.getListValues(lstResults);
 				
-				// filter out non-instance results
+				// filter out non-cls results - NCI request
 				for (Iterator iterator = results.iterator(); iterator.hasNext();) {
 					Object object = (Object) iterator.next();
-					if (!(object instanceof Instance)) {
+					if (!(object instanceof OWLNamedClass)) {
 						iterator.remove();
 					}
 				}
 				
 				setInstancesToExport(results);
 				setSlotsToExport(getPossibleExportSlots());
-				super.actionPerformed(arg0);
+				super.actionPerformed(event);
 			}
-			
-			
+						
 			private Collection<Slot> getPossibleExportSlots() {
 				ArrayList<Slot> slots = new ArrayList<Slot>();				
 				if (isOWL) {
@@ -242,6 +246,12 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 					slots.add(owlModel.getRDFSCommentProperty());
 				}				
 				return slots;		
+			}
+			
+			@Override
+			protected String getExportValueString(Object value) {
+				// TODO Bob, please override this method
+				return super.getExportValueString(value);
 			}
 		};
 	}
