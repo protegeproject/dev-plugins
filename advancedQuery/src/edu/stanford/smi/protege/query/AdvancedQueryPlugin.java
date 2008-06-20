@@ -250,8 +250,13 @@ public class AdvancedQueryPlugin extends AbstractTabWidget {
 			
 			@Override
 			protected String getExportValueString(Object value) {
-				// TODO Bob, please override this method
-				return super.getExportValueString(value);
+				String delimiter = getSlotsDelimiter();
+				String result = super.getExportValueString(value);
+				// escape the escape char
+				if (result.indexOf(delimiter) > -1) {
+					result = "\"" + result.replaceAll("\"", "\"\"") + "\"";
+				}
+				return result;
 			}
 		};
 	}
