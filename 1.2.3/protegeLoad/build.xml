@@ -1,0 +1,93 @@
+<?xml version = "1.0" encoding = "utf-8"?>
+<project name = "Developer Plugins" default = "dist" basedir = ".">    
+   <property environment="env"/>
+   <property name="protege.home" value="${env.PROTEGE_HOME}"/>
+
+   <property name = "build"   location = "./build"/>
+   <property name = "src"     location = "./src"/>  
+   <property name = "classes" location = "${build}/classes"/>  
+   <property name = "plugins" location = "${build}/plugins"/>
+   <property name = "lib" value = "../lib"/>
+   <property name = "junit" value = "./junit"/>
+   <property name = "plugin_dist" value = "edu.stanford.smi.protegex.load"/>
+   <property name = "pluginName" value = "LoadMonitorPlugin"/>
+
+   <property name = "debug" value="on"/>
+
+    <!-- This property must point to the location of the protege.jar and    -->
+    <!-- protege-test.jar libraries.  We are making the default assumption  -->
+    <!-- that people will copy the protege.jar and protege-test.jar files   -->
+    <!-- into the protege owl library directory.  This is not a great       -->
+    <!-- assumption but I don't know a better one.                          -->
+    <property name = "protegeCoreLib" value = "${protege.home}/protege.jar"/>
+
+
+   <path id = "project.classpath">    
+     <pathelement location = "${protegeCoreLib}"/>
+   </path>
+
+   <target name = "init">
+     <mkdir dir = "${classes}"/>
+     <mkdir dir = "${plugins}"/>
+     <mkdir dir = "${plugins}/${plugin_dist}"/>
+   </target>
+
+
+    <target name = "checkProtegeLibs">
+      <fail message = "check the protegeCoreLib property. It should point to the location of the protege.jar library">
+        <condition>
+          <not>
+            <and>
+              <available file="${protegeCoreLib}" type = "file"/>
+            </and>
+          </not>
+        </condition>
+      </fail>
+    </target>
+
+   <target name = "compile" depends = "init, checkProtegeLibs">
+     <javac srcdir = "${src}" destdir = "${classes}" debug="${debug}">
+       <classpath refid = "project.classpath"/>    
+     </javac>
+   </target>
+
+   <target name = "jar" depends = "compile">
+     <jar jarfile = "${plugins}/${plugin_dist}/${pluginName}.jar" 
+          basedir = "${classes}" 
+          manifest = "${src}/META-INF/MANIFEST.MF"/>  
+     <copy file = "./plugin.properties"
+           todir = "${plugins}/${plugin_dist}"/>
+   </target>
+
+   <target name = "dist" depends = "jar">
+     <zip basedir = "${plugins}"
+          includes = "${plugin_dist}/**"
+          destfile = "${plugins}/${pluginName}.zip"/>
+   </target>
+
+
+   <target name = "install" depends = "dist">
+      <fail message = "set the protege.home variable to do an install">
+         <condition>
+            <not>
+               <and>
+                  <isset property="protege.home"/>
+                  <available file="${protege.home}"
+                             type="dir"/>
+               </and>
+            </not>
+         </condition>
+      </fail>
+      <unzip src="${plugins}/${pluginName}.zip" 
+             dest = "${protege.home}/plugins"
+             overwrite = "true"/>
+   </target>
+
+   <target name = "clean">
+     <delete dir = "${plugins}"/>
+     <delete dir = "${classes}"/>
+     <delete dir = "../lucene"/>
+     <delete dir = "../logs"/>
+   </target>
+
+</project>
