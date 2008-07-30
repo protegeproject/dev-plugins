@@ -23,20 +23,30 @@ import edu.stanford.smi.protege.server.RemoteSession;
 import edu.stanford.smi.protege.server.framestore.RemoteClientFrameStore;
 import edu.stanford.smi.protege.server.framestore.RemoteClientStats;
 import edu.stanford.smi.protege.server.framestore.background.FrameCalculatorStats;
+import edu.stanford.smi.protege.server.job.KillUserSessionJob;
+import edu.stanford.smi.protege.server.metaproject.MetaProjectConstants;
 import edu.stanford.smi.protege.server.metaproject.Operation;
-import edu.stanford.smi.protege.server.metaproject.impl.UnbackedOperationImpl;
 import edu.stanford.smi.protege.util.transaction.TransactionIsolationLevel;
 import edu.stanford.smi.protege.widget.AbstractTabWidget;
 
-// an example tab
-public class ServerStatsPlugin extends AbstractTabWidget {
-  public static final Operation KILL_OTHER_USER_SESSION = new UnbackedOperationImpl("KillOtherUserSession", null);
 
-  /**
-   * 
-   */
+/**
+ * Plugin that display some client-server statistics (e.g. cache hit rate,
+ * connected users, users in transactions) and allows to kill a client session.
+ * <br/>
+ * @deprecated Use <code>AdminServerTab<code> which encapsulates all these functionalities
+ *
+ */
+@Deprecated
+public class ServerStatsPlugin extends AbstractTabWidget {
+ /**
+ * Use <code>MetaProjectConstants.OPERATION_KILL_OTHER_USER_SESSION</code>
+ */
+  @Deprecated
+  public static final Operation KILL_OTHER_USER_SESSION = MetaProjectConstants.OPERATION_KILL_OTHER_USER_SESSION;
+
   private static final long serialVersionUID = -7384785943184573895L;
-  
+
   private boolean debugServerCheck = false;
   private UserInfoTable userInfo;
   private JTable userInfoTable;
@@ -46,34 +56,34 @@ public class ServerStatsPlugin extends AbstractTabWidget {
   private JTextField roundTripText;
   private JTextField serverSpeedText;
   private JTextField txLevelText;
-  
+
   private JButton refreshButton;
   private JButton clearCacheButton;
   private JButton killClientButton;
-  
+
   public void setDebugServerCheck(boolean debugServerCheck) {
       this.debugServerCheck = debugServerCheck;
   }
-  
+
   public void initialize() {
     setLabel("Server Stats");
 	if (!getKnowledgeBase().getProject().isMultiUserClient()) {
 	    return;
 	}
     setIcon(Icons.getInstanceIcon());
-    
+
     createRefreshButton();
     createClearCacheButton();
     createKillClientButton();
     layoutUI();
     refresh();
   }
-  
+
   private void layoutUI() {
     setLayout(new BorderLayout());
-    
+
     add(createTextArea(), BorderLayout.NORTH);
-    
+
     userInfo = new UserInfoTable();
     userInfoTable = new JTable();
     userInfoTable.setModel(userInfo);
@@ -85,34 +95,34 @@ public class ServerStatsPlugin extends AbstractTabWidget {
     buttonArea.add(killClientButton);
     add(buttonArea, BorderLayout.SOUTH);
   }
-  
+
   private JPanel createTextArea() {
     int col2size = 8;
     JPanel textArea = new JPanel(new GridLayout(5,2));
-    
+
     textArea.add(new JLabel("Client Cache Hit rate:"));
     clientCacheText = createOutputTextField(col2size);
     textArea.add(clientCacheText);
-    
+
     textArea.add(new JLabel("Client Closure Cache rate:"));
     clientClosureCacheText = createOutputTextField(col2size);
     textArea.add(clientClosureCacheText);
-    
+
     textArea.add(new JLabel("Estimated round trip time:"));
     roundTripText = createOutputTextField(col2size);
     textArea.add(roundTripText);
-    
+
     textArea.add(new JLabel("Milliseconds to calculate Frame Cache"));
     serverSpeedText = createOutputTextField(col2size);
     textArea.add(serverSpeedText);
-    
+
     textArea.add(new JLabel("Transaction Isolation Level:"));
     txLevelText = createOutputTextField(col2size);
     textArea.add(txLevelText);
-    
+
     return textArea;
   }
-  
+
   private void createRefreshButton() {
     refreshButton = new JButton("Refresh Server Stats");
     refreshButton.addActionListener(new ActionListener() {
@@ -121,7 +131,7 @@ public class ServerStatsPlugin extends AbstractTabWidget {
       }
     });
   }
-  
+
   private void createClearCacheButton() {
     clearCacheButton = new JButton("Clear Client Cache");
     clearCacheButton.addActionListener( new ActionListener() {
@@ -132,21 +142,23 @@ public class ServerStatsPlugin extends AbstractTabWidget {
       }
     });
   }
-  
+
   private void createKillClientButton() {
       killClientButton = new JButton("Kill Client Button");
       killClientButton.addActionListener(new ActionListener() {
 
           public void actionPerformed(ActionEvent e) {
               int row = userInfoTable.getSelectedRow();
-              if (row < 0) return;
+              if (row < 0) {
+				return;
+			}
               RemoteSession session = userInfo.getSession(row);
               if (!debugServerCheck && !isKillAllowed(session)) {
                   JOptionPane.showMessageDialog(userInfoTable, "Not permitted to kill user session belonging to " + session.getUserName());
                   return;
               }
-              int kill = 
-                  JOptionPane.showConfirmDialog(userInfoTable, "Kill session for user " + session.getUserName() + 
+              int kill =
+                  JOptionPane.showConfirmDialog(userInfoTable, "Kill session for user " + session.getUserName() +
                                                 "? This user may lose work as a result of this",
                                                 "Confirm Kill Session",
                                                 JOptionPane.OK_CANCEL_OPTION);
@@ -154,64 +166,64 @@ public class ServerStatsPlugin extends AbstractTabWidget {
                   new KillUserSessionJob(session, getKnowledgeBase()).execute();
                   refresh();
               }
-              
+
           }
       });
   }
-  
+
   private boolean isKillAllowed(RemoteSession session) {
       KnowledgeBase kb = getKnowledgeBase();
       String me = kb.getUserName();
       return RemoteClientFrameStore.isOperationAllowed(kb, KILL_OTHER_USER_SESSION) ||
-                  (me != null && me.equals(session.getUserName()));
+                  me != null && me.equals(session.getUserName());
   }
-  
+
   private JTextField createOutputTextField(int size) {
     JTextField field = new JTextField(size);
     field.setEnabled(false);
     field.setHorizontalAlignment(SwingConstants.LEFT);
     return field;
   }
-  
+
   private void refresh() {
     RemoteClientFrameStore client = getRemoteClientFrameStore();
     RemoteClientStats clientStats = client.getClientStats();
     long startTime = System.currentTimeMillis();
     FrameCalculatorStats serverStats = client.getServerStats();
     long interval = System.currentTimeMillis() - startTime;
-    
+
     int total = clientStats.getCacheHits() + clientStats.getCacheMisses();
     if (total != 0)  {
-      float rate = ((float) 100) * ((float) clientStats.getCacheHits()) / ((float) total);
+      float rate = (float) 100 * (float) clientStats.getCacheHits() / total;
       clientCacheText.setText("" + rate);
     } else {
       clientCacheText.setText("0/0");
     }
-    
+
     total = clientStats.getClosureCacheHits() + clientStats.getClosureCacheMisses();
     if (total != 0) {
-      float rate = ((float) 100) * ((float) clientStats.getClosureCacheHits()) / ((float) total);
+      float rate = (float) 100 * (float) clientStats.getClosureCacheHits() / total;
       clientClosureCacheText.setText("" + rate);
     } else {
       clientClosureCacheText.setText("Closure Caching not started\n");
     }
-    
+
     roundTripText.setText("" + interval);
-    
+
     serverSpeedText.setText("" + serverStats.getPrecalculateTime());
-    
+
     TransactionIsolationLevel level = client.getTransactionIsolationLevel();
     txLevelText.setText(level == null ? "error" : level.toString());
-    
+
     userInfo.setUserInfo(client.getUserInfo(), serverStats);
 
   }
-  
+
   public RemoteClientFrameStore getRemoteClientFrameStore() {
     DefaultKnowledgeBase kb = (DefaultKnowledgeBase) getProject().getKnowledgeBase();
     return (RemoteClientFrameStore) kb.getTerminalFrameStore();
   }
-  
+
   public static boolean isSuitable(Project project, Collection errors) {
     KnowledgeBase kb = project.getKnowledgeBase();
     if (!(kb instanceof DefaultKnowledgeBase)) {
