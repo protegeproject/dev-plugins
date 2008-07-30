@@ -1,0 +1,113 @@
+<?xml version = "1.0" encoding = "utf-8"?>
+<project name = "Developer Plugins" default = "compile" basedir = ".">    S
+   <property environment="env"/>
+   <property name="protege.home" value="${env.PROTEGE_HOME}"/>
+
+   <property name = "build"   location = "./build"/>
+   <property name = "src" value = "./src"/>  
+   <property name = "classes" value = "${build}/classes"/>  
+   <property name = "plugins" value = "${build}/plugins"/>
+   <property name = "lib" value = "../lib"/>
+   <property name = "server_plugin_dist" value = "edu.stanford.smi.protege.server"/>
+   <property name = "pluginName" value="server_admin_plugin"/>
+
+    <!-- 
+       #  ********** Finding Protege Libraries. *************
+       # 
+       #  We are using an approach that allows developers to decide
+       #  whether to hand copy the needed jars into the lib directory or
+       #  to point them to a protege installation.
+      -->
+    <target name="checkProtegeHome">
+      <condition property="protege.home.set">
+        <available file="${protege.home}/protege.jar" type="file"/>
+      </condition>
+    </target>
+    
+    <target name="useProtegeHome" depends="checkProtegeHome" 
+            if="protege.home.set">
+      <echo message="Using Protege Home = ${protege.home} to find protege jars"/>
+      <property name="protege.lib" value="${protege.home}/protege.jar"/>
+    </target>
+    
+    <target name="useLibDir" depends="checkProtegeHome" 
+            unless="protege.home.set">
+       <echo message="Using lib dir to find protege jars"/>
+      <property name="protege.lib" value="${lib}/protege.jar"/>
+    </target>
+
+
+    <target name = "checkProtegeLibs" depends="useProtegeHome, useLibDir">
+      <condition property="libs.found">
+        <and>
+          <available file="${protege.lib}" type = "file"/>
+        </and>
+      </condition>
+      <path id = "project.classpath">    
+         <pathelement location = "${protege.lib}"/>
+      </path>
+    </target>
+
+    <target name="checkProtegeLibsAndReport" depends="checkProtegeLibs"
+            unless="libs.found">
+      <echo message="Missing protege libraries.  You can either "/>
+      <echo message="set the PROTEGE_HOME environment variable to a"/>
+      <echo message="protege installation directory where the"/>
+      <echo message="appropriate plugins have been installed or copy the"/>
+      <echo message="needed jars into the lib directory"/>
+      <echo message="The jar file in question is protege.jar."/>
+      <fail message="build aborted."/>
+    </target>
+      
+   <!-- 
+     #  ********** Finding Protege Libraries Done. *************
+     -->
+
+   <target name = "init">
+     <mkdir dir = "${classes}"/>
+     <mkdir dir = "${plugins}"/>
+     <mkdir dir = "${plugins}/${server_plugin_dist}"/>
+   </target>  
+
+
+   <target name = "compile" depends = "init, checkProtegeLibsAndReport">    
+     <javac srcdir = "${src}" destdir = "${classes}" debug="on">
+       <classpath refid = "project.classpath"/>    
+     </javac>    
+   </target>
+
+   <target name = "jar" depends = "compile">
+     <jar jarfile = "${plugins}/${server_plugin_dist}/${pluginName}.jar" 
+          basedir = "${classes}" 
+          manifest = "${src}/META-INF/MANIFEST.MF"/>  
+   </target>
+
+   <target name = "dist" depends = "jar">
+     <zip basedir = "${plugins}"
+          includes = "${server_plugin_dist}/**"
+          destfile = "${plugins}/${pluginName}.zip"/>
+   </target>
+
+   <target name = "install" depends = "dist">
+      <fail message = "set the protege.home variable to do an install">
+         <condition>
+            <not>
+               <and>
+                  <isset property="protege.home"/>
+                  <available file="${protege.home}"
+                             type="dir"/>
+               </and>
+            </not>
+         </condition>
+      </fail>
+      <unzip src="${plugins}/${pluginName}.zip" 
+             dest = "${protege.home}/plugins"
+             overwrite = "true"/>
+   </target>
+
+   <target name = "clean">
+     <delete dir = "${plugins}"/>
+     <delete dir = "${classes}"/>
+   </target>
+
+</project>
