@@ -8,33 +8,32 @@ import java.util.Map;
 import javax.swing.table.AbstractTableModel;
 
 import edu.stanford.smi.protege.server.RemoteSession;
-import edu.stanford.smi.protege.server.Session;
 import edu.stanford.smi.protege.server.framestore.background.FrameCalculatorStats;
 
 public class UserInfoTable extends AbstractTableModel {
 
-  public enum Column {  
-    user("User"), ipAddr("IP Adress"), transaction("In Transaction?"), 
+  public enum Column {
+    user("User"), ipAddr("IP Adress"), transaction("In Transaction?"),
     backlog("Server Backlog");
-    
-    private String name;   
-    
+
+    private String name;
+
     private Column(String name) {
       this.name = name;
     }
-    
+
     public String getColumnName() {
       return name;
     }
   };
-  
+
   Map<RemoteSession, Boolean> userInfo = new HashMap<RemoteSession, Boolean>();
   FrameCalculatorStats stats = null;
   List<RemoteSession>  sessions = new ArrayList<RemoteSession>();
 
   public UserInfoTable() {
   }
-    
+
   public void setUserInfo(Map<RemoteSession, Boolean> userInfo, FrameCalculatorStats  stats) {
     this.userInfo = userInfo;
     this.stats    = stats;
@@ -75,20 +74,22 @@ public class UserInfoTable extends AbstractTableModel {
         }
       }
     default:
-      throw new UnsupportedOperationException("Programmer Error");  
+      throw new UnsupportedOperationException("Programmer Error");
     }
   }
-  
+
   public RemoteSession getSession(int row) {
       return sessions.get(row);
   }
-  
-  public String getColumnName(int colIndex) {
+
+  @Override
+public String getColumnName(int colIndex) {
     Column col = Column.values()[colIndex];
     return col.getColumnName();
   }
-  
-  public Class getColumnClass(int colIndex) {
+
+  @Override
+public Class getColumnClass(int colIndex) {
     Column col = Column.values()[colIndex];
     switch (col) {
     case user:
@@ -102,7 +103,7 @@ public class UserInfoTable extends AbstractTableModel {
       throw new UnsupportedOperationException("Programmer Error");
     }
   }
-  
+
   public RemoteSession getRemoteSession(int row) {
     return sessions.get(row);
   }
