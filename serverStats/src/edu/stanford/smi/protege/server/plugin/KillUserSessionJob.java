@@ -15,19 +15,25 @@ import edu.stanford.smi.protege.server.ServerProject;
 import edu.stanford.smi.protege.server.framestore.RemoteServerFrameStore;
 import edu.stanford.smi.protege.server.framestore.ServerFrameStore;
 import edu.stanford.smi.protege.server.framestore.ServerSessionLost;
+import edu.stanford.smi.protege.server.metaproject.MetaProjectConstants;
 import edu.stanford.smi.protege.util.Log;
 import edu.stanford.smi.protege.util.ProtegeJob;
 
+/**
+ * @deprecated - Use {@link edu.stanford.smi.protege.server.job.KillUserSessionJob}
+ */
+@Deprecated
 public class KillUserSessionJob extends ProtegeJob {
     private RemoteSession prototypeSessionToKill;
-    
+
     public KillUserSessionJob(RemoteSession session, KnowledgeBase kb) {
         super(kb);
         this.prototypeSessionToKill = session;
     }
 
 
-    public Object run() throws ProtegeException {
+    @Override
+	public Object run() throws ProtegeException {
         if (!isAllowed()) {
             return Boolean.FALSE;
         }
@@ -36,12 +42,12 @@ public class KillUserSessionJob extends ProtegeJob {
         for (RemoteSession sessionToKill : new ArrayList<RemoteSession>(server.getCurrentSessions())) {
             if (prototypeSessionToKill.getUserName().equals(sessionToKill.getUserName()) &&
                     prototypeSessionToKill.getSessionGroup() == sessionToKill.getSessionGroup()) {
-                allSucceeded =  allSucceeded && killSession(server, sessionToKill);                
+                allSucceeded =  allSucceeded && killSession(server, sessionToKill);
             }
         }
         return Boolean.valueOf(allSucceeded);
     }
-    
+
     private boolean killSession(Server server, RemoteSession session) {
         Collection<ServerProject> projects = server.getCurrentProjects(session);
         if (projects == null) {
@@ -67,8 +73,8 @@ public class KillUserSessionJob extends ProtegeJob {
         RemoteServerFrameStore fs = serverProject.getDomainKbFrameStore(mySession);
 
         try {
-            return prototypeSessionToKill.getUserName().equals(mySession.getUserName()) || 
-                fs.getAllowedOperations(mySession).contains(ServerStatsPlugin.KILL_OTHER_USER_SESSION);
+            return prototypeSessionToKill.getUserName().equals(mySession.getUserName()) ||
+                fs.getAllowedOperations(mySession).contains(MetaProjectConstants.OPERATION_KILL_OTHER_USER_SESSION);
         } catch (RemoteException e) {
             Log.getLogger().log(Level.WARNING, "Caught Exception trying to check permissions", e);
             return false;
