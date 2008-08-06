@@ -3,6 +3,7 @@
 	<property file="build.properties"/>
    <property environment="env"/>
    <property name="protege.home" value="${env.PROTEGE_HOME}"/>
+	<!-- test -->
 
    <property name = "build"   location = "./build"/>
    <property name = "src"     location = "./src"/>  
