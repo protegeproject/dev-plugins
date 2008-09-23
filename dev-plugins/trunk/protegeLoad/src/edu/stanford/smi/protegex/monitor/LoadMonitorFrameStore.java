@@ -148,13 +148,18 @@ public class LoadMonitorFrameStore extends AbstractFrameStoreInvocationHandler {
      * So it is a significant overhead if it occured on each knowledge base call.
      */
     private void setButtonColor(Color c) {
-        if (!enabled || monitorButton == null) return;
-        Rectangle r = monitorButton.getBounds();
-        r.x=0;
-        r.y=0;
-        monitorButton.setBackground(c);
-        monitorButton.paint(monitorButton.getGraphics());
-        // monitorButton.paintImmediately(r);
+    	if (!enabled || monitorButton == null || monitorButton.getGraphics() == null ) return;
+    	try {
+    		Rectangle r = monitorButton.getBounds();
+    		r.x=0;
+    		r.y=0;
+    		monitorButton.setBackground(c);
+    		monitorButton.paint(monitorButton.getGraphics());
+    		// monitorButton.paintImmediately(r);
+    	}
+    	catch (Throwable t) {
+    		;
+    	}
     }
 
 }
