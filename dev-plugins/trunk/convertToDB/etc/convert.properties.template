@@ -1,0 +1,26 @@
+<!-- protege.home = the Protege 3.x installation directory, e.g., /home/user/Protege_3.4  -->
+protege.home=.
+
+<!-- The absolute path as a URL to the OWL file path, e.g., file:/home/ttania/projects/snomed.owl -->
+owl.file=example/pizza/pizza.owl
+
+<!-- The file -> DB conversion mode. Possible values: streaming or nonstreaming -->
+convert.mode=streaming
+
+<!-- The JDBC driver name, e.g., com.mysql.jdbc.Driver -->
+db.driver=com.mysql.jdbc.Driver
+
+<!-- The database URL, e.g., jdbc:mysql://localhost/protege --> 
+db.url=jdbc:mysql://localhost/protege
+
+<!-- The database URL, e.g., jdbc:mysql://localhost/protege --> 
+db.table=pizza
+
+<!-- The database user name, e.g., myUser --> 
+db.user=myUser
+
+<!-- The database user password, e.g., myPassword --> 
+db.password=myPassword
+
+<!-- Maximum Java heap size --> 
+heap.size.max=500m
