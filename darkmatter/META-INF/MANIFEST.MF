@@ -1,0 +1,5 @@
+Manifest-Version: 1.0
+
+Name: edu/stanford/bmir/protegex/dark/matter/DarkMatterDetector
+Tab-Widget: True
+
