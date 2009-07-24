@@ -13,6 +13,7 @@ import java.util.logging.Logger;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JComponent;
+import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -24,6 +25,8 @@ import edu.stanford.smi.protegex.owl.ui.widget.AbstractTabWidget;
 public class DarkMatterDetector extends AbstractTabWidget {
     private static final long serialVersionUID = 5762527226593760925L;
     private Logger log = Log.getLogger(getClass());
+    
+    private JLabel statusContainer;
 
     private JList unreferenced;
     private DefaultListModel listModel;
@@ -37,6 +40,7 @@ public class DarkMatterDetector extends AbstractTabWidget {
     public void initialize() {
         setLabel("Dark Matter Plugin");
         setLayout(new BorderLayout());
+        add(createStatus(), BorderLayout.PAGE_START);
         add(createList(), BorderLayout.CENTER);
         add(createButtons(), BorderLayout.PAGE_END);
         executor = Executors.newCachedThreadPool();
@@ -50,13 +54,29 @@ public class DarkMatterDetector extends AbstractTabWidget {
         super.dispose();
     }
     
+    
+    private JComponent createStatus() {
+        JPanel panel = new  JPanel();
+        panel.setLayout(new FlowLayout(FlowLayout.CENTER));
+        statusContainer = new JLabel("Dark Matter Plugin Started");
+        panel.add(statusContainer);
+        return panel;
+    }
+    
+    private JComponent createList() {
+        unreferenced = new JList();
+        listModel = new DefaultListModel();
+        unreferenced.setModel(listModel);
+        return new JScrollPane(unreferenced);
+    }
+    
     private JPanel createButtons() {
         JPanel panel = new JPanel();
         panel.setLayout(new FlowLayout());
         start = new JButton("Start");
         start.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                log.info("Starting search for unreferenced anonymous resources");
+                setStatus("Starting search for unreferenced anonymous resources");
                 Callable<Integer> call = new FindUnreferencedSwing(getOWLModel(), DarkMatterDetector.this, "Searching for unreferenced anonymous resources") {
                   @Override
                     protected void onFind(RDFResource resource) {
@@ -66,6 +86,7 @@ public class DarkMatterDetector extends AbstractTabWidget {
                     protected void onFinish() {
                       jobDone();
                       super.onFinish();
+                      setStatus("Search complete");
                     }
                 };
                 listModel.clear();
@@ -78,7 +99,7 @@ public class DarkMatterDetector extends AbstractTabWidget {
         clean = new JButton("Clean");
         clean.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                log.info("Starting deletion of unreferenced anonymous resources");
+                setStatus("Starting deletion of unreferenced anonymous resources");
                 Callable<Integer> call = new FindUnreferencedSwing(getOWLModel(), DarkMatterDetector.this, "Deleting  unreferenced anonymous resources") {
                   @Override
                     protected void onFind(RDFResource resource) {
@@ -89,6 +110,7 @@ public class DarkMatterDetector extends AbstractTabWidget {
                     protected void onFinish() {
                       jobDone();
                       super.onFinish();
+                      setStatus("Deletions complete");
                     }
                 };
                 listModel.clear();
@@ -112,11 +134,9 @@ public class DarkMatterDetector extends AbstractTabWidget {
         return panel;
     }
     
-    private JComponent createList() {
-        unreferenced = new JList();
-        listModel = new DefaultListModel();
-        unreferenced.setModel(listModel);
-        return new JScrollPane(unreferenced);
+    private void setStatus(String status) {
+        log.info(status);
+        statusContainer.setText(status);
     }
     
     private void jobStarted() {
