@@ -25,6 +25,8 @@ public abstract class FindUnreferencedResources implements Callable<Integer> {
     
     protected abstract void onFind(RDFResource resource);
     protected abstract void onFinish();
+    protected abstract void setFramesToFinish(int count);
+    protected abstract void setProgress(int progress);
     
     @SuppressWarnings({ "unchecked" })
     public Integer call() {
@@ -32,8 +34,12 @@ public abstract class FindUnreferencedResources implements Callable<Integer> {
             Collection cpFrames = model.getRDFResources();
             traversed.clear();
 
-            log.info("Searching through " + cpFrames.size() + " frames");
+            int progress = 0;
+            int size = cpFrames.size();
+            log.info("Searching through " + size + " frames");
+            setFramesToFinish(size);
             for (Object o : cpFrames) {
+                setProgress(progress++);
                 if (Thread.interrupted()) {
                     break;
                 }
@@ -42,12 +48,15 @@ public abstract class FindUnreferencedResources implements Callable<Integer> {
                     lookForContainingUnreferencedClass(resource);
                 }
             }
-            onFinish();
             return topLevelCount;
         }
         catch (Throwable t) {
             log.log(Level.WARNING, "Exception caught in search thread", t);
             return topLevelCount;
+        }
+        finally {
+            onFinish();
+            log.info("Search for anonymous resources completed");
         }
     }
     

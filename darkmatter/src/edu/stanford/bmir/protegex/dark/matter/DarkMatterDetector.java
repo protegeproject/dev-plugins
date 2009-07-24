@@ -28,8 +28,8 @@ public class DarkMatterDetector extends AbstractTabWidget {
     private JList unreferenced;
     private DefaultListModel listModel;
     private JButton start;
-    private JButton clean;
     private JButton stop;
+    private JButton clean;
     
     private Future<Integer> job;
     private ExecutorService executor;
@@ -56,8 +56,8 @@ public class DarkMatterDetector extends AbstractTabWidget {
         start = new JButton("Start");
         start.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                log.info("Starting search for unreferenced anonymous classes");
-                Callable<Integer> call = new FindUnreferencedResources(getOWLModel()) {
+                log.info("Starting search for unreferenced anonymous resources");
+                Callable<Integer> call = new FindUnreferencedSwing(getOWLModel(), DarkMatterDetector.this, "Searching for unreferenced anonymous resources") {
                   @Override
                     protected void onFind(RDFResource resource) {
                       listModel.addElement(resource.getBrowserText());
@@ -65,6 +65,7 @@ public class DarkMatterDetector extends AbstractTabWidget {
                   @Override
                     protected void onFinish() {
                       jobDone();
+                      super.onFinish();
                     }
                 };
                 listModel.clear();
@@ -74,15 +75,39 @@ public class DarkMatterDetector extends AbstractTabWidget {
         });  
         panel.add(start);
         
+        clean = new JButton("Clean");
+        clean.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                log.info("Starting deletion of unreferenced anonymous resources");
+                Callable<Integer> call = new FindUnreferencedSwing(getOWLModel(), DarkMatterDetector.this, "Deleting  unreferenced anonymous resources") {
+                  @Override
+                    protected void onFind(RDFResource resource) {
+                      listModel.addElement("Deleting " + resource.getBrowserText());
+                      resource.delete();
+                    }
+                  @Override
+                    protected void onFinish() {
+                      jobDone();
+                      super.onFinish();
+                    }
+                };
+                listModel.clear();
+                job = executor.submit(call);
+                jobStarted();
+            }
+        });  
+        panel.add(clean);
         
         stop = new JButton("Stop");
-        stop.setEnabled(false);
         stop.addActionListener(new ActionListener() {
-           public void actionPerformed(ActionEvent e) {
-               job.cancel(true);
-            } 
-        });
+            public void actionPerformed(ActionEvent e) {
+                if (job != null) {
+                    job.cancel(true);
+                }
+            }
+        });  
         panel.add(stop);
+
         return panel;
     }
     
@@ -95,11 +120,13 @@ public class DarkMatterDetector extends AbstractTabWidget {
     
     private void jobStarted() {
         start.setEnabled(false);
+        clean.setEnabled(false);
         stop.setEnabled(true);
     }
     
     private void jobDone() {
         start.setEnabled(true);
+        clean.setEnabled(true);
         stop.setEnabled(false);
         job = null;
     }
