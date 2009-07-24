@@ -105,7 +105,8 @@ public class DarkMatterDetector extends AbstractTabWidget {
                     job.cancel(true);
                 }
             }
-        });  
+        });
+        stop.setEnabled(false);
         panel.add(stop);
 
         return panel;
