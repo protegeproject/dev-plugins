@@ -10,13 +10,13 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.logging.Logger;
 
-import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
-import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JTable;
+import javax.swing.table.TableColumn;
 
 import edu.stanford.smi.protege.util.Log;
 import edu.stanford.smi.protegex.owl.model.RDFResource;
@@ -28,8 +28,8 @@ public class DarkMatterDetector extends AbstractTabWidget {
     
     private JLabel statusContainer;
 
-    private JList unreferenced;
-    private DefaultListModel listModel;
+    private JTable unreferenced;
+    private DarkMatterTableModel tableModel;
     private JButton start;
     private JButton stop;
     private JButton clean;
@@ -64,9 +64,9 @@ public class DarkMatterDetector extends AbstractTabWidget {
     }
     
     private JComponent createList() {
-        unreferenced = new JList();
-        listModel = new DefaultListModel();
-        unreferenced.setModel(listModel);
+        tableModel = new DarkMatterTableModel();
+        unreferenced = new JTable(tableModel);
+        /* attempts to set the width of the id field failed... */
         return new JScrollPane(unreferenced);
     }
     
@@ -80,7 +80,7 @@ public class DarkMatterDetector extends AbstractTabWidget {
                 Callable<Integer> call = new FindUnreferencedSwing(getOWLModel(), DarkMatterDetector.this, "Searching for unreferenced anonymous resources") {
                   @Override
                     protected void onFind(RDFResource resource) {
-                      listModel.addElement(resource.getBrowserText());
+                      tableModel.addInfo(resource, resource.getBrowserText());
                     }
                   @Override
                     protected void onFinish() {
@@ -89,7 +89,7 @@ public class DarkMatterDetector extends AbstractTabWidget {
                       setStatus("Search complete");
                     }
                 };
-                listModel.clear();
+                tableModel.clear();
                 job = executor.submit(call);
                 jobStarted();
             }
@@ -103,7 +103,7 @@ public class DarkMatterDetector extends AbstractTabWidget {
                 Callable<Integer> call = new FindUnreferencedSwing(getOWLModel(), DarkMatterDetector.this, "Deleting  unreferenced anonymous resources") {
                   @Override
                     protected void onFind(RDFResource resource) {
-                      listModel.addElement("Deleting " + resource.getBrowserText());
+                      tableModel.addInfo(resource, "Deleting " + resource.getBrowserText());
                       resource.delete();
                     }
                   @Override
@@ -113,7 +113,7 @@ public class DarkMatterDetector extends AbstractTabWidget {
                       setStatus("Deletions complete");
                     }
                 };
-                listModel.clear();
+                tableModel.clear();
                 job = executor.submit(call);
                 jobStarted();
             }
