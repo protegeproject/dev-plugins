@@ -12,7 +12,7 @@
    <property name = "lib"             location = "./lib"/>
 
    <property name = "plugin_dist"     value = "edu.stanford.bmir.dark.matter"/>
-   <property name = "pluginName"      value = "DarkMattterDetector"/>
+   <property name = "pluginName"      value = "DarkMatterDetector"/>
 
    <property name = "owl.path"        value = "edu.stanford.smi.protegex.owl"/>
 
