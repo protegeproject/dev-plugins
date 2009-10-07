@@ -1,4 +1,0 @@
-Manifest-Version: 1.0
-
-Name: edu/stanford/smi/protegex/logctl/LogCtlPlugin
-Tab-Widget: True
