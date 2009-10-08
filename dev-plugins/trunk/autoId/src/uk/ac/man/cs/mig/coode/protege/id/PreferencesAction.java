@@ -31,7 +31,10 @@ public class PreferencesAction extends AbstractOWLModelAction {
 
     public void run(OWLModel owlModel) {
         PreferencesPanel panel = new PreferencesPanel(owlModel);
-        ProtegeUI.getModalDialogFactory().showDialog(ProtegeUI.getTopLevelContainer(owlModel.getProject()), panel,
-                "AutoId Preferences", ModalDialogFactory.MODE_CLOSE);
+        int ret = ProtegeUI.getModalDialogFactory().showDialog(ProtegeUI.getTopLevelContainer(owlModel.getProject()), panel,
+                                                               "AutoId Preferences", ModalDialogFactory.MODE_OK_CANCEL);
+        if (ret == 0) {
+            panel.save(owlModel);
+        }
     }
 }
