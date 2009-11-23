@@ -93,7 +93,6 @@
           basedir = "${classes}" 
           manifest = "${build}/manifest.mf"/>
      <copy  todir="${plugins}/${plugin_dist}" file="./etc/plugin.properties"/>
-     <copy  todir="${plugins}/${plugin_dist}" file="./etc/default.properties"/>
    </target>
 
    <target name = "dist" depends = "jar">

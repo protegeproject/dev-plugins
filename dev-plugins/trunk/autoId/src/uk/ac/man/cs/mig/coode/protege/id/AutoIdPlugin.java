@@ -28,28 +28,14 @@ public class AutoIdPlugin extends ProjectPluginAdapter{
 
         if (kb instanceof OWLModel) {
             OWLModel owlModel = (OWLModel) kb;
-
-            InputStream propsStream = this.getClass().getResourceAsStream("/default.properties");
-            Properties props = new Properties();
             try {
-                props.load(propsStream);
-                propsStream.close();
-
-                String prefix = props.getProperty("id.prefix");
-                String ns;
-                if ((ns = owlModel.getNamespaceManager().getDefaultNamespace()) != null) {
-                    prefix = ns + prefix;
+                Preferences p =  new Preferences(owlModel);
+                if (p.isEnabled()) {
+                    IdFrameStore.setAutoIdPreferences(owlModel, p);
+                    log.info("ACTIVATED AUTO ID");
                 }
-                else {
-                    prefix = owlModel.getDefaultOWLOntology().getName() + "#" + prefix;
-                }
-
-                IdFrameStore fs = new IdFrameStore(owlModel, prefix);
-                kb.insertFrameStore(fs);
-
-                log.info("ACTIVATED AUTO ID prefix: " + prefix);
             }
-            catch (IOException e) {
+            catch (Throwable e) {
                 log.log(Level.WARNING, "Exception caught", e);
             }
         }
