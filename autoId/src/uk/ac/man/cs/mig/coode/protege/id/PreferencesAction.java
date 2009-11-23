@@ -10,7 +10,7 @@ public class PreferencesAction extends AbstractOWLModelAction {
 
 
     public String getIconFileName() {
-        return "AutoId Preferences";
+        return "Preferences";
     }
 
 
@@ -33,7 +33,7 @@ public class PreferencesAction extends AbstractOWLModelAction {
         PreferencesPanel panel = new PreferencesPanel(owlModel);
         int ret = ProtegeUI.getModalDialogFactory().showDialog(ProtegeUI.getTopLevelContainer(owlModel.getProject()), panel,
                                                                "AutoId Preferences", ModalDialogFactory.MODE_OK_CANCEL);
-        if (ret == 0) {
+        if (ret == ModalDialogFactory.OPTION_OK) {
             panel.save(owlModel);
         }
     }

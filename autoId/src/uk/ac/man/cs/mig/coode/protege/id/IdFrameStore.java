@@ -1,15 +1,28 @@
 package uk.ac.man.cs.mig.coode.protege.id;
 
+import java.awt.EventQueue;
+import java.awt.FlowLayout;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.UUID;
 import java.util.logging.Logger;
+
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JTextField;
 
 import edu.stanford.smi.protege.model.Cls;
 import edu.stanford.smi.protege.model.Frame;
 import edu.stanford.smi.protege.model.FrameID;
+import edu.stanford.smi.protege.model.Slot;
 import edu.stanford.smi.protege.model.framestore.FrameStoreAdapter;
+import edu.stanford.smi.protege.ui.ProjectManager;
 import edu.stanford.smi.protege.util.Log;
+import edu.stanford.smi.protege.util.ModalDialog;
 import edu.stanford.smi.protegex.owl.model.OWLModel;
+import edu.stanford.smi.protegex.owl.model.OWLNamedClass;
 import edu.stanford.smi.protegex.owl.model.impl.AbstractOWLModel;
+import edu.stanford.smi.protegex.owl.ui.widget.OWLUI;
 
 /**
  * @author Nick Drummond, Medical Informatics Group, University of Manchester
@@ -20,13 +33,50 @@ public class IdFrameStore extends FrameStoreAdapter{
 
     private long current = 0;
 
-    private OWLModel owlModel;
     private String lastUnallocatedName;
+    private boolean unique;
+    private String ns;
     private String prefix;
+    private int digits;
+    private Slot displaySlot;
+    
+    public static void setAutoIdPreferences(OWLModel owlModel, Preferences preferences) {
+        IdFrameStore frameStore = owlModel.getFrameStoreManager().getFrameStoreFromClass(IdFrameStore.class);
+        if (frameStore != null) {
+            owlModel.getFrameStoreManager().removeFrameStore(frameStore);
+        }
+        if (preferences.isEnabled()) {
+            frameStore = new IdFrameStore(owlModel, preferences);
+            owlModel.getFrameStoreManager().insertFrameStore(frameStore, 2);
+        }
+    }
 
-    public IdFrameStore(OWLModel owlModel, String prefix) {
-        this.owlModel = owlModel;
-        this.prefix = prefix;
+    private IdFrameStore(OWLModel owlModel, Preferences preferences) {
+        ns = owlModel.getNamespaceManager().getDefaultNamespace();
+        if (ns == null) {
+            ns = owlModel.getDefaultOWLOntology().getName() + "#";
+        }
+        prefix = preferences.getPrefix();
+        unique = preferences.isUniqueId();
+        digits = preferences.getDigits();
+        
+        displaySlot = OWLUI.getCommonBrowserSlot(owlModel);
+    }
+    
+    private void showSetDisplayNameDialog(Cls cls) {
+        JPanel panel = new JPanel();
+        panel.setLayout(new FlowLayout());
+        panel.add(new JLabel("Display label for class: "));
+        JTextField nameField = new JTextField();
+        panel.add(nameField);
+        ModalDialog.showDialog(ProjectManager.getProjectManager().getCurrentProjectView(), 
+                               panel, 
+                               "Set Display Label", 
+                               ModalDialog.MODE_CLOSE);
+        String displayName = nameField.getText();
+        if (displaySlot != null && displayName != null && displayName.length() != 0) {
+            super.setDirectOwnSlotValues(cls, displaySlot, Collections.singleton(displayName));
+        }
     }
 
     @Override
@@ -68,7 +118,8 @@ public class IdFrameStore extends FrameStoreAdapter{
     public Cls createCls(FrameID id, Collection directTypes,
                          Collection directSuperclasses, boolean loadDefaults) {
         Cls cls;
-        if (id.getName() == null || id.getName().equals(lastUnallocatedName)) {
+        if (EventQueue.isDispatchThread() &&
+                (id.getName() == null || id.getName().equals(lastUnallocatedName))) {
             id = generateNextId();
             cls = super.createCls(id, directTypes, directSuperclasses, loadDefaults);
         }
@@ -81,9 +132,18 @@ public class IdFrameStore extends FrameStoreAdapter{
 
     private FrameID generateNextId() {
         String id;
-        do{
-            id = prefix + current++;
-        } while (null != owlModel.getOWLNamedClass(id));
+        if (!unique) {
+            do{
+                String i = "" + current++;
+                while (i.length() < digits) {
+                    i = "0" + i;
+                }
+                id = ns + prefix + i;
+            } while (null != super.getFrame(id));
+        }
+        else {
+            id = ns + prefix + UUID.randomUUID().toString();
+        }
         return new FrameID(id);
     }
 }
