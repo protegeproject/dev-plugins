@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- ====================================================================== 
+     Feb 23, 2010 1:13:04 PM                                                        
+
+    Trivial Servlet for controlling logging (java.util.Logger) in a web container
+                   
+     tredmond                                                                
+     ====================================================================== -->
+<project name="project" default="deploy">
+    <property file="local.properties"/>
+
+    <property environment="env"/>
+    <property name="catalina.home"      location = "${env.CATALINA_HOME}"/>
+    
+    <property name = "src"              location = "./src"/>  
+    <property name = "war.template"     location = "./war"/>
+    <property name = "lib"              location = "./lib"/>
+
+    <property name = "build"            location = "./build"/>
+    <property name = "war"              location = "${build}/war"/>
+    <property name = "classes"          location = "${build}/war/WEB-INF/classes"/>
+    
+    <property name = "war.file"         location = "${build}/debug.war"/>
+
+
+    <target name = "stage.war">
+      <mkdir dir = "${war}"/>
+      <copy todir="${war}">
+        <fileset dir="${war.template}"/>
+      </copy>
+      <mkdir dir="${classes}"/>
+    </target>
+
+    <target name = "compile" depends="stage.war">
+      <javac srcdir="${src}" destdir="${classes}" debug="true">
+        <classpath>
+          <pathelement location="${lib}/servlet.jar"/>
+        </classpath>
+      </javac>
+    </target>
+    
+    <target name = "war" depends = "compile">
+        <war destfile="${war.file}" basedir="${war}" />
+    </target>
+
+    <!-- ================================= 
+          target: default              
+         ================================= -->
+    <target name = "deploy" depends = "war">
+      <copy todir="${catalina.home}/webapps"
+            file="${war.file}"/>
+    </target>
+
+
+    <target name = "clean">
+        <delete dir="${build}"/>
+    </target>
+</project>
