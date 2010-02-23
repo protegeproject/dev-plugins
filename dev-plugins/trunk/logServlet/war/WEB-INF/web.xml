@@ -1,0 +1,13 @@
+<web-app>
+
+    <servlet>
+        <servlet-name>LogControl</servlet-name>
+        <servlet-class>org.protege.servlet.logging.LoggingServlet</servlet-class>               
+    </servlet>
+    
+    <servlet-mapping>
+    	<servlet-name>LogControl</servlet-name>
+    	<url-pattern>/LogControl</url-pattern>
+    </servlet-mapping>
+
+</web-app>
