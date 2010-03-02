@@ -1,5 +1,6 @@
 package uk.ac.man.cs.mig.coode.protege.id;
 
+import java.awt.Dimension;
 import java.awt.EventQueue;
 import java.awt.FlowLayout;
 import java.util.Collection;
@@ -17,6 +18,7 @@ import edu.stanford.smi.protege.model.FrameID;
 import edu.stanford.smi.protege.model.Slot;
 import edu.stanford.smi.protege.model.framestore.FrameStoreAdapter;
 import edu.stanford.smi.protege.ui.ProjectManager;
+import edu.stanford.smi.protege.ui.SetDisplaySlotPanel;
 import edu.stanford.smi.protege.util.Log;
 import edu.stanford.smi.protege.util.ModalDialog;
 import edu.stanford.smi.protegex.owl.model.OWLModel;
@@ -54,7 +56,10 @@ public class IdFrameStore extends FrameStoreAdapter{
     private IdFrameStore(OWLModel owlModel, Preferences preferences) {
         ns = owlModel.getNamespaceManager().getDefaultNamespace();
         if (ns == null) {
-            ns = owlModel.getDefaultOWLOntology().getName() + "#";
+            ns = owlModel.getDefaultOWLOntology().getName();
+            if (!ns.endsWith("/")) {
+                ns = ns + "#";
+            }
         }
         prefix = preferences.getPrefix();
         unique = preferences.isUniqueId();
@@ -69,6 +74,8 @@ public class IdFrameStore extends FrameStoreAdapter{
         panel.add(new JLabel("Display label for class: "));
         JTextField nameField = new JTextField();
         panel.add(nameField);
+        Dimension d = new JLabel("My Name for a class").getPreferredSize();
+        nameField.setPreferredSize(new Dimension((int) d.getWidth(), (int) (1.5 *  d.getHeight())));
         ModalDialog.showDialog(ProjectManager.getProjectManager().getCurrentProjectView(), 
                                panel, 
                                "Set Display Label", 
@@ -122,6 +129,7 @@ public class IdFrameStore extends FrameStoreAdapter{
                 (id.getName() == null || id.getName().equals(lastUnallocatedName))) {
             id = generateNextId();
             cls = super.createCls(id, directTypes, directSuperclasses, loadDefaults);
+            showSetDisplayNameDialog(cls);
         }
         else {
             cls = super.createCls(id, directTypes, directSuperclasses, loadDefaults);
