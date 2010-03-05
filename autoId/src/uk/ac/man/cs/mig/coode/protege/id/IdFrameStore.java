@@ -1,16 +1,12 @@
 package uk.ac.man.cs.mig.coode.protege.id;
 
-import java.awt.Dimension;
 import java.awt.EventQueue;
-import java.awt.FlowLayout;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.UUID;
 import java.util.logging.Logger;
 
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.JTextField;
+import javax.swing.JOptionPane;
 
 import edu.stanford.smi.protege.model.Cls;
 import edu.stanford.smi.protege.model.Frame;
@@ -18,11 +14,8 @@ import edu.stanford.smi.protege.model.FrameID;
 import edu.stanford.smi.protege.model.Slot;
 import edu.stanford.smi.protege.model.framestore.FrameStoreAdapter;
 import edu.stanford.smi.protege.ui.ProjectManager;
-import edu.stanford.smi.protege.ui.SetDisplaySlotPanel;
 import edu.stanford.smi.protege.util.Log;
-import edu.stanford.smi.protege.util.ModalDialog;
 import edu.stanford.smi.protegex.owl.model.OWLModel;
-import edu.stanford.smi.protegex.owl.model.OWLNamedClass;
 import edu.stanford.smi.protegex.owl.model.impl.AbstractOWLModel;
 import edu.stanford.smi.protegex.owl.ui.widget.OWLUI;
 
@@ -66,22 +59,21 @@ public class IdFrameStore extends FrameStoreAdapter{
         digits = preferences.getDigits();
         
         displaySlot = OWLUI.getCommonBrowserSlot(owlModel);
+        if (displaySlot != null && displaySlot.equals(owlModel.getSystemFrames().getNameSlot())) {
+            displaySlot = null;
+        }
     }
     
     private void showSetDisplayNameDialog(Cls cls) {
-        JPanel panel = new JPanel();
-        panel.setLayout(new FlowLayout());
-        panel.add(new JLabel("Display label for class: "));
-        JTextField nameField = new JTextField();
-        panel.add(nameField);
-        Dimension d = new JLabel("My Name for a class").getPreferredSize();
-        nameField.setPreferredSize(new Dimension((int) d.getWidth(), (int) (1.5 *  d.getHeight())));
-        ModalDialog.showDialog(ProjectManager.getProjectManager().getCurrentProjectView(), 
-                               panel, 
-                               "Set Display Label", 
-                               ModalDialog.MODE_CLOSE);
-        String displayName = nameField.getText();
-        if (displaySlot != null && displayName != null && displayName.length() != 0) {
+        if (displaySlot == null) {
+            return;
+        }
+        String displayName = (String) JOptionPane.showInputDialog(ProjectManager.getProjectManager().getCurrentProjectView(),
+                                                                  "Display label for Class",
+                                                                  "New Class",
+                                                                  JOptionPane.PLAIN_MESSAGE);
+
+        if (displayName != null && displayName.length() != 0) {
             super.setDirectOwnSlotValues(cls, displaySlot, Collections.singleton(displayName));
         }
     }

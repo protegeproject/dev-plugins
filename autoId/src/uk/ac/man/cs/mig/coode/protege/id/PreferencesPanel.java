@@ -31,6 +31,7 @@ import edu.stanford.smi.protegex.owl.ui.ResourceRenderer;
 import edu.stanford.smi.protegex.owl.ui.widget.OWLUI;
 
 public class PreferencesPanel extends JPanel {
+    private static final long serialVersionUID = 8387335916115840779L;
     private JCheckBox           enabled;
     private JRadioButton        uniqueId;
     private JRadioButton        sequentialId;
@@ -203,9 +204,9 @@ public class PreferencesPanel extends JPanel {
         preferences.setPrefix(prefixField.getText());
         preferences.setDigits((Integer) digitCountField.getValue());
         preferences.save(owlModel);
-        IdFrameStore.setAutoIdPreferences(owlModel, preferences);
         Slot slot = (Slot) renderingPropertyBox.getSelectedItem();
         OWLUI.setCommonBrowserSlot(owlModel, slot);
+        IdFrameStore.setAutoIdPreferences(owlModel, preferences);
     }
 
 }
