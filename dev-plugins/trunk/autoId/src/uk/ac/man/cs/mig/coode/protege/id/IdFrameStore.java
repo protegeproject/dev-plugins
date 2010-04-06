@@ -26,7 +26,7 @@ import edu.stanford.smi.protegex.owl.ui.widget.OWLUI;
 public class IdFrameStore extends FrameStoreAdapter{
     private static Logger log = Log.getLogger(IdFrameStore.class);
 
-    private long current = 0;
+    private long current = 1;
 
     private String lastUnallocatedName;
     private boolean unique;
