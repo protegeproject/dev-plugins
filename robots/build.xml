@@ -1,0 +1,68 @@
+<?xml version="1.0"?>
+
+<project name="Simulator" default="run" basedir=".">
+
+    <property environment="env"/>
+    <property name="protege.home" value="${env.PROTEGE_HOME}"/>
+
+    <property name = "classes" value="./classes"/>
+    <property name = "owl.home" value="${protege.home}/plugins/edu.stanford.smi.protegex.owl"/>
+
+    <path id="project.classpath">
+      <pathelement location="${protege.home}/protege.jar"/>
+      <fileset dir="${owl.home}">
+        <include name="*.jar"/>
+      </fileset>
+    </path>
+
+    <target name="init">
+      <mkdir dir="${classes}"/>
+    </target>
+
+    <target name="compile" depends="init">
+      <javac srcdir="./src" destdir="${classes}" debug="on">
+        <classpath refid="project.classpath"/>
+      </javac>
+    </target>
+
+    <target name="run" depends="compile">
+      <java classname="simulator.Simulator" fork="true">
+        <jvmarg value="-Dprotege.dir=${protege.home}"/>
+        <jvmarg value="-Xmx500M"/>
+        <!--
+          <jvmarg value="-Xdebug"/>
+          <jvmarg value="-Xrunjdwp:transport=dt_socket,address=8200,server=y,suspend=y"/>
+           -->
+
+        <arg value="localhost"/>
+        <arg value="1099"/>
+      	<arg value="Pizza"/>
+      	<arg value="200"/>
+        <classpath refid="project.classpath"/>
+        <classpath>
+          <pathelement location="${classes}"/>
+        </classpath>
+      </java>
+    </target>
+
+    <target name="debug" depends="compile">
+      <java classname="simulator.Simulator" fork="true">
+        <jvmarg value="-Dprotege.dir=${protege.home}"/>
+        <jvmarg value="-Xmx500M"/>
+        <jvmarg value="-Xdebug"/>
+        <jvmarg value="-Xrunjdwp:transport=dt_socket,address=8200,server=y,suspend=y"/>
+        <arg value="localhost"/>
+        <arg value="1099"/>
+      	<arg value="Pizza"/>
+      	<arg value="200"/>
+        <classpath refid="project.classpath"/>
+        <classpath>
+          <pathelement location="${classes}"/>
+        </classpath>
+      </java>
+    </target>
+	
+    <target name="clean">
+      <delete dir="${classes}"/>
+    </target>
+</project>
