@@ -44,8 +44,8 @@ public class Simulator {
     public void run() {
         getRobots();
         for (Robot r : robots) {
-            log.info("" + r + "/" + r.getProperty(AbstractRobot.CLASS) + 
-                               " logging in with normalization = " + getNormalize(r));
+            log.info("" + r + "/" + r.getProperty(AbstractRobot.CLASS_PROP) + 
+                               " each measured cycle = " + getRunsPerMeasurement(r) + " runs.");
             r.login(hostname, port, project);
         }
         for (final Robot r : robots) {
@@ -71,12 +71,12 @@ public class Simulator {
             final Properties p = new Properties();
             try {
                 p.load(new FileInputStream(f));
-                int count = Integer.parseInt(p.getProperty(AbstractRobot.COUNT));
+                int count = Integer.parseInt(p.getProperty(AbstractRobot.THREAD_COUNT_PROP));
                 for (int i = 1; i <= count; i++) {
                     Class c = null;
                     try {
                         Object[] initargs = { p };
-                        c = Class.forName(p.getProperty(AbstractRobot.CLASS));
+                        c = Class.forName(p.getProperty(AbstractRobot.CLASS_PROP));
                         Constructor construct = c.getConstructor(args);
                         robots.add((Robot) construct.newInstance(initargs));
                     }
@@ -98,7 +98,7 @@ public class Simulator {
         }
         
         public void run() {
-            int normalize = getNormalize(r);
+            int normalize = getRunsPerMeasurement(r);
             long startTime;
             try {
                 do {
@@ -221,8 +221,8 @@ public class Simulator {
         }
     }
     
-    private int getNormalize(Robot r) {
-        return Integer.parseInt(r.getProperty(AbstractRobot.NORMALIZE));
+    private int getRunsPerMeasurement(Robot r) {
+        return Integer.parseInt(r.getProperty(AbstractRobot.RUNS_PER_MEASUREMENT_PROP));
     }
 
     /**
