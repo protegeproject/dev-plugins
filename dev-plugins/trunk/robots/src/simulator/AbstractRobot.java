@@ -19,14 +19,14 @@ import edu.stanford.smi.protegex.owl.model.OWLObjectProperty;
 public abstract class AbstractRobot implements Robot {
     private static Logger log = Log.getLogger(AbstractRobot.class);
     
-    public final static String COUNT = "count";
-    public final static String NORMALIZE = "normalize";
-    public final static String CLASS = "class";
+    public final static String THREAD_COUNT_PROP = "threads";
+    public final static String RUNS_PER_MEASUREMENT_PROP = "runsPerMeasurement";
+    public final static String CLASS_PROP = "class";
     
-    public final static String NAME = "name";
-    public final static String PASSWORD = "password";
+    public final static String NAME_PROP = "name";
+    public final static String PASSWORD_PROP = "password";
 
-    public final static String DESCEND_PROB = "descend.probability";
+    public final static String DESCEND_PROBABILITY_PROP = "descend.probability";
     
     
     private static int counter = 0;
@@ -51,8 +51,8 @@ public abstract class AbstractRobot implements Robot {
     public void login(String hostname, int port, String projectName) {
         RemoteProjectManager rpm = RemoteProjectManager.getInstance();
         Project project = rpm.getProject(hostname + ":" + port, 
-                                         properties.getProperty(NAME), 
-                                         properties.getProperty(PASSWORD), 
+                                         properties.getProperty(NAME_PROP), 
+                                         properties.getProperty(PASSWORD_PROP), 
                                          projectName, 
                                          true);
         kb = project.getKnowledgeBase();
@@ -68,7 +68,7 @@ public abstract class AbstractRobot implements Robot {
     }
     
     public String toString() {
-        return getProperty(NAME) + "<" + mycount + ">";
+        return getProperty(NAME_PROP) + "<" + mycount + ">";
     }
     
     public KnowledgeBase getKnowledgeBase() {
@@ -95,7 +95,7 @@ public abstract class AbstractRobot implements Robot {
     public OWLNamedClass chooseClass(OWLModel om) {
         int depth = 0;
         OWLNamedClass top = om.getOWLThingClass();
-        float descentProbability = Float.parseFloat(getProperty(DESCEND_PROB));
+        float descentProbability = Float.parseFloat(getProperty(DESCEND_PROBABILITY_PROP));
         do {
             Collection subclasses  = top.getSubclasses(false);
             int count = 0;
