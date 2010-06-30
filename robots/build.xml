@@ -4,6 +4,13 @@
 
     <property environment="env"/>
     <property name="protege.home" value="${env.PROTEGE_HOME}"/>
+	<property file="./build.properties"/>
+	
+	<property name="host"     value="localhost"/>
+    <property name="port"     value="1099"/>
+    <property name="project"  value="Pizza"/>
+    <property name="timeout1" value="10"/>
+    <property name="timeout2" value="200"/>
 
     <property name = "classes" value="./classes"/>
     <property name = "owl.home" value="${protege.home}/plugins/edu.stanford.smi.protegex.owl"/>
@@ -17,6 +24,7 @@
 
     <target name="init">
       <mkdir dir="${classes}"/>
+      <echo message="Connecting to host ${host} on port ${port}"/>
     </target>
 
     <target name="compile" depends="init">
@@ -29,15 +37,11 @@
       <java classname="simulator.Simulator" fork="true">
         <jvmarg value="-Dprotege.dir=${protege.home}"/>
         <jvmarg value="-Xmx500M"/>
-        <!--
-          <jvmarg value="-Xdebug"/>
-          <jvmarg value="-Xrunjdwp:transport=dt_socket,address=8200,server=y,suspend=y"/>
-           -->
-
-        <arg value="localhost"/>
-        <arg value="1099"/>
-      	<arg value="Pizza"/>
-      	<arg value="200"/>
+        <arg value="${host}"/>
+        <arg value="${port}"/>
+      	<arg value="${project}"/>
+      	<arg value="${timeout1}"/>
+      	<arg value="${timeout2}"/>
         <classpath refid="project.classpath"/>
         <classpath>
           <pathelement location="${classes}"/>
@@ -49,12 +53,12 @@
       <java classname="simulator.Simulator" fork="true">
         <jvmarg value="-Dprotege.dir=${protege.home}"/>
         <jvmarg value="-Xmx500M"/>
-        <jvmarg value="-Xdebug"/>
-        <jvmarg value="-Xrunjdwp:transport=dt_socket,address=8200,server=y,suspend=y"/>
-        <arg value="localhost"/>
-        <arg value="1099"/>
-      	<arg value="Pizza"/>
-      	<arg value="200"/>
+        <jvmarg value="-agentlib:jdwp=transport=dt_socket,address=8100,server=y,suspend=y"/>
+        <arg value="${host}"/>
+        <arg value="${port}"/>
+      	<arg value="${project}"/>
+      	<arg value="${timeout1}"/>
+      	<arg value="${timeout2}"/>
         <classpath refid="project.classpath"/>
         <classpath>
           <pathelement location="${classes}"/>

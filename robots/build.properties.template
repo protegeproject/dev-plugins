@@ -1,0 +1,7 @@
+
+host=localhost
+port=1099
+project=Pizza
+timeout1=10
+timeout2=200
+
