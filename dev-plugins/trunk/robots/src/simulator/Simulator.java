@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Map.Entry;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import edu.stanford.smi.protege.util.Log;
@@ -62,7 +63,8 @@ public class Simulator {
         File[] files = root.listFiles(new FileFilter() {
 
             public boolean accept(File pathname) {
-                return pathname.getPath().endsWith(".properties");
+                String path = pathname.getPath();
+                return path.endsWith(".properties") && !path.endsWith("build.properties");
             }
 
         });
@@ -107,7 +109,7 @@ public class Simulator {
                         try {
                             r.run();
                         } catch (Throwable t) {
-                            t.printStackTrace();
+                            log.log(Level.WARNING, "Exception caught running robot", t);
                         }
                     }
                     if (doLog()) {

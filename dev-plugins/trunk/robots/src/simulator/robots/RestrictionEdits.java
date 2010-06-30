@@ -21,6 +21,12 @@ import edu.stanford.smi.protegex.owl.model.RDFSClass;
 
 public class RestrictionEdits extends AbstractRobot {
 	private static Logger logger = Log.getLogger(RestrictionEdits.class);
+	
+	public static final String WAIT_BETWEEN_WRITES_PROPERTY="wait.between.writes";
+	
+	private long waitBetweenWrites;
+	private boolean doCleanup = false;
+	
 	private OWLModel model;
 		
 	private Random r = new Random();
@@ -36,6 +42,12 @@ public class RestrictionEdits extends AbstractRobot {
 
 	public RestrictionEdits(Properties properties) {
 		super(properties);
+		try {
+		    waitBetweenWrites = Integer.parseInt(getProperty(WAIT_BETWEEN_WRITES_PROPERTY));
+		}
+		catch (Throwable t) {
+		    waitBetweenWrites = 0;
+		}
 	}
 	
 	@Override
@@ -47,17 +59,27 @@ public class RestrictionEdits extends AbstractRobot {
 	
 	@Override
 	public void logout() {
-		root.delete();
-		for (OWLObjectProperty p : createdProperties) {
-			p.delete();
-		}
-		super.logout();
+	    if (doCleanup) {
+	        root.delete();
+	        for (OWLObjectProperty p : createdProperties) {
+	            p.delete();
+	        }
+	    }
+	    super.logout();
 	}
 
 	@Override
 	public void run() {
 		newClassAndProperty();
 		changeDefined();
+		if (waitBetweenWrites != 0) {
+		    try {
+		        Thread.sleep(waitBetweenWrites);
+		    }
+		    catch (InterruptedException ie) {
+		        logger.log(Level.WARNING, "shouldn't", ie);
+		    }
+		}
 	}
 	
 	private void newClassAndProperty() {
@@ -89,14 +111,14 @@ public class RestrictionEdits extends AbstractRobot {
 		boolean success = false;
 		while (!success) {
 			try {
+			    OWLNamedClass c1 = nextRandomClass();
+			    OWLObjectProperty p2 = chooseObjectProperty(model);
+			    OWLNamedClass c2 = chooseClass(model);
 				model.beginTransaction("define a class");
-				OWLNamedClass c1 = nextRandomClass();
-				OWLObjectProperty p2 = chooseObjectProperty(model);
-				OWLNamedClass c2 = chooseClass(model);
-				List<OWLClass> disjunts = new ArrayList<OWLClass>();
-				disjunts.add(c1);
-				disjunts.add(model.createOWLSomeValuesFrom(p2, c2));
-				c.addEquivalentClass(model.createOWLUnionClass(disjunts));
+				List<OWLClass> disjuncts = new ArrayList<OWLClass>();
+				disjuncts.add(c1);
+				disjuncts.add(model.createOWLSomeValuesFrom(p2, c2));
+				c.addEquivalentClass(model.createOWLUnionClass(disjuncts));
 				model.commitTransaction();
 				success = true;
 			}
