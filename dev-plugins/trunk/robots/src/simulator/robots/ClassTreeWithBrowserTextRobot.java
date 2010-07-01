@@ -1,6 +1,7 @@
 package simulator.robots;
 
 import java.util.Properties;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import simulator.AbstractRobot;
@@ -31,6 +32,24 @@ public class ClassTreeWithBrowserTextRobot extends AbstractRobot {
     @Override
     public void run() {
         long start = System.currentTimeMillis();
+        MonitorThreadPerformanceRunnable monitor = null;
+        if (slowOperation  != 0) {
+        	monitor = new MonitorThreadPerformanceRunnable(Thread.currentThread());
+        	new Thread(monitor, "Monitoring GetChildren performance").start();
+        }
+        
+        OWLNamedClass c = doTheActualWork();
+        	
+        long interval = System.currentTimeMillis() - start;
+        if (monitor != null) {
+        	monitor.setDone(true);
+        }
+        if (slowOperation != 0 && interval > slowOperation) {
+            logger.info("Getting Children of " + c + " took " + interval);
+        }
+    }
+    
+    private OWLNamedClass doTheActualWork() {
         OWLModel om = (OWLModel) getKnowledgeBase();
         OWLNamedClass c = chooseClass(om);
         FrameWithBrowserText cwt = new FrameWithBrowserText(c, c.getBrowserText());
@@ -38,10 +57,38 @@ public class ClassTreeWithBrowserTextRobot extends AbstractRobot {
         root.setModel(new LazyTreeModel(root));
         ClassTreeWithBrowserTextNode node = new ClassTreeWithBrowserTextNode(root, cwt);
         node.children();
-        long interval = System.currentTimeMillis() - start;
-        if (slowOperation != 0 && interval > slowOperation) {
-            logger.info("Getting Children of " + c + " took " + interval);
-        }
+        return c;
+    }
+    
+    private class MonitorThreadPerformanceRunnable implements Runnable {
+    	private boolean done = false;
+    	private Thread toMonitor;
+    	
+    	public MonitorThreadPerformanceRunnable(Thread threadToMonitor) {
+    		toMonitor = threadToMonitor;
+    	}
+    	
+    	@Override
+    	public void run() {
+    		synchronized (this) {
+    			try {
+    				wait(slowOperation);
+    			}
+    			catch (InterruptedException ie) {
+    				logger.log(Level.WARNING, "shouldn't", ie);
+    			}
+    			if (!done) {
+    	            logger.info("Getting Children is taking a long time for thread " + toMonitor);
+    			}
+    		}
+    	}
+    	
+    	public synchronized void setDone(boolean done) {
+			this.done = done;
+			if (done) {
+				notifyAll();
+			}
+		}
     }
 
 }
