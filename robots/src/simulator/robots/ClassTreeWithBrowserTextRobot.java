@@ -68,7 +68,6 @@ public class ClassTreeWithBrowserTextRobot extends AbstractRobot {
     		toMonitor = threadToMonitor;
     	}
     	
-    	@Override
     	public void run() {
     		synchronized (this) {
     			try {
