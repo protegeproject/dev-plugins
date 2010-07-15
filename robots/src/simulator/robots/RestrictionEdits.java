@@ -25,13 +25,13 @@ public class RestrictionEdits extends AbstractRobot {
 	public static final String WAIT_BETWEEN_WRITES_PROPERTY="wait.between.writes";
 	
 	private long waitBetweenWrites;
-	private boolean doCleanup = false;
 	
 	private OWLModel model;
 		
 	private Random r = new Random();
 	
 	private OWLNamedClass root;
+	private Set<OWLNamedClass>     createdClasses    = new HashSet<OWLNamedClass>();
 	private Set<OWLObjectProperty> createdProperties = new HashSet<OWLObjectProperty>();
 	
 	private String classPrefix = UUID.randomUUID().toString().replace("-","_");
@@ -57,15 +57,20 @@ public class RestrictionEdits extends AbstractRobot {
 		root = model.createOWLNamedClass(UUID.randomUUID().toString().replace("-", "_"));
 	}
 	
+	/*
+	 * Bug alert  - if you delete the root before  the created classes the server crashes.
+	 * Even so the deletes cause a tremendous slowdown.
+	 */
 	@Override
 	public void logout() {
-	    if (doCleanup) {
-	        root.delete();
-	        for (OWLObjectProperty p : createdProperties) {
-	            p.delete();
-	        }
-	    }
-	    super.logout();
+		for (OWLNamedClass c : createdClasses) {
+			c.delete();
+		}
+		for (OWLObjectProperty p : createdProperties) {
+			p.delete();
+		}
+		root.delete();
+		super.logout();
 	}
 
 	@Override
@@ -93,7 +98,7 @@ public class RestrictionEdits extends AbstractRobot {
 				randomSleep();
 			}
 		}
-
+		createdClasses.add(c);
 		c.addSuperclass(root);
 		c.removeSuperclass(model.getOWLThingClass());
 		
