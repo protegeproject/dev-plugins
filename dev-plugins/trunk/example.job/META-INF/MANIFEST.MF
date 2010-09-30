@@ -1,0 +1,5 @@
+Manifest-Version: 1.0
+Created-By: 1.4.2_01 (Sun Microsystems Inc.)
+
+Name: edu/stanford/bmir/job/ProjectPlugin.class
+Project-Plugin: True
