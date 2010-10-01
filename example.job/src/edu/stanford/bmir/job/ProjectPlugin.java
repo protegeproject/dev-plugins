@@ -17,10 +17,12 @@ public class ProjectPlugin extends ProjectPluginAdapter {
 
     @Override
     public void afterLoad(Project p) {
-        OWLModel model = (OWLModel) p.getKnowledgeBase();
-        OWLNamedClass c = chooseClass(model, .5f);
-        MyJob job = new MyJob(model, c);
-        job.execute();
+        if (p.getKnowledgeBase() instanceof OWLModel && !p.isMultiUserServer()) {
+            OWLModel model = (OWLModel) p.getKnowledgeBase();
+            OWLNamedClass c = chooseClass(model, .5f);
+            MyJob job = new MyJob(model, c);
+            job.execute();
+        }
     }
     
     public OWLNamedClass chooseClass(OWLModel om, float descentProbability) {
@@ -67,4 +69,6 @@ public class ProjectPlugin extends ProjectPluginAdapter {
         }
         return false;
     }
+    
+    
 }
